@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-O servidor sobe em HTTPS com um certificado autoassinado, porque a câmera só funciona em contexto seguro. Para testar no celular, abra o endereço **Network** que aparece no terminal (ex.: `https://192.168.0.10:5173`), com o celular na mesma rede Wi-Fi, e aceite o aviso de certificado.
+O servidor sobe em HTTPS com um certificado autoassinado, porque a câmera só funciona em contexto seguro. Para testar no celular, abra o endereço **Network** que aparece no terminal (ex.: `https://192.168.0.10:5173/filtros/`), com o celular na mesma rede Wi-Fi, e aceite o aviso de certificado.
 
 ## Scripts
 

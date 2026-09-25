@@ -47,7 +47,9 @@ body {
   overflow: hidden;
 }
 
-/* Preview em tela cheia, cortado (cover) para não distorcer. */
+/* Preview em tela cheia, cortado (cover) para não distorcer.
+   O canvas faz o corte no shader; o vídeo usa object-fit quando é o preview. */
+.source,
 .preview {
   position: absolute;
   inset: 0;
@@ -59,12 +61,47 @@ body {
   transition: opacity 200ms ease;
 }
 
-.app[data-state='running'] .preview {
+/* O vídeo fica atrás do canvas: precisa continuar "visível" para o navegador
+   seguir decodificando os frames (o Safari pausa vídeos ocultos). */
+.source {
+  z-index: 0;
+}
+
+.preview {
+  z-index: 1;
+  display: block;
+}
+
+.app[data-state='running'] .preview,
+.app[data-state='running'] .source {
   opacity: 1;
 }
 
-.preview.mirrored {
+.app[data-render='video'] .preview {
+  display: none;
+}
+
+.source.mirrored {
   transform: scaleX(-1);
+}
+
+.top-bar,
+.bottom-bar,
+.status,
+.fps {
+  z-index: 2;
+}
+
+.fps {
+  position: absolute;
+  top: calc(12px + var(--safe-top));
+  left: calc(16px + var(--safe-left));
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--glass);
+  font: 600 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: pre;
 }
 
 .top-bar,

@@ -12,7 +12,11 @@
   </head>
   <body>
     <main class="app" data-state="loading">
-      <video class="preview" aria-label="Imagem da câmera" playsinline muted autoplay></video>
+      <!-- O vídeo é só a fonte dos frames; o canvas mostra a imagem filtrada.
+           Sem WebGL, o próprio vídeo aparece como preview. -->
+      <video class="source" aria-hidden="true" playsinline muted autoplay></video>
+      <canvas class="preview" role="img" aria-label="Imagem da câmera"></canvas>
+      <output class="fps" id="fps" hidden></output>
 
       <header class="top-bar">
         <button class="icon-btn" id="switch-camera" type="button" aria-label="Trocar câmera" hidden>

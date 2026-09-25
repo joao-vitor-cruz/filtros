@@ -1,12 +1,16 @@
 import { Camera, CameraError, countVideoInputs } from './camera';
 import { errorMessages } from './messages';
+import { Renderer } from './renderer/renderer';
+import { FpsMeter } from './fps';
 
 type AppState = 'loading' | 'running' | 'error';
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 
 const app = $<HTMLElement>('.app');
-const video = $<HTMLVideoElement>('.preview');
+const video = $<HTMLVideoElement>('.source');
+const canvas = $<HTMLCanvasElement>('.preview');
+const fpsLabel = $<HTMLOutputElement>('#fps');
 const switchBtn = $<HTMLButtonElement>('#switch-camera');
 const loading = $<HTMLElement>('#loading');
 const errorBox = $<HTMLElement>('#error');
@@ -16,6 +20,30 @@ const retryBtn = $<HTMLButtonElement>('#retry');
 
 const camera = new Camera(video);
 let cameraCount = 0;
+
+// Sem WebGL (raro), o próprio <video> vira o preview, ainda sem filtros.
+let renderer: Renderer | null = null;
+try {
+  renderer = new Renderer(canvas, video);
+} catch (err) {
+  console.warn('WebGL indisponível, usando o vídeo direto.', err);
+}
+app.dataset.render = renderer ? (renderer.isWebGL2 ? 'webgl2' : 'webgl') : 'video';
+
+// Medidor de fps para testes em aparelhos: abra a página com ?debug.
+if (renderer && new URLSearchParams(location.search).has('debug')) {
+  const meter = new FpsMeter();
+  let lastUpdate = 0;
+  fpsLabel.hidden = false;
+  renderer.setFrameListener((now) => {
+    meter.tick(now);
+    if (now - lastUpdate < 500) return;
+    lastUpdate = now;
+    fpsLabel.textContent =
+      `${meter.fps.toFixed(0)} fps · ${app.dataset.render}\n` +
+      `vídeo ${video.videoWidth}×${video.videoHeight} · tela ${canvas.width}×${canvas.height}`;
+  });
+}
 
 function setState(state: AppState): void {
   app.dataset.state = state;
@@ -40,11 +68,13 @@ function showError(err: unknown): void {
 function updateMirror(): void {
   const reported = camera.reportedFacing;
   const mirrored = reported ? reported === 'user' : cameraCount <= 1 || camera.facing === 'user';
-  video.classList.toggle('mirrored', mirrored);
+  if (renderer) renderer.mirrored = mirrored;
+  video.classList.toggle('mirrored', mirrored && !renderer);
 }
 
 async function startCamera(facing = camera.facing): Promise<void> {
   setState('loading');
+  renderer?.stop();
   try {
     await camera.start(facing);
     if (!camera.active) return; // substituído por uma chamada mais recente
@@ -52,6 +82,7 @@ async function startCamera(facing = camera.facing): Promise<void> {
     cameraCount = await countVideoInputs();
     switchBtn.hidden = cameraCount < 2;
     updateMirror();
+    renderer?.start();
     setState('running');
   } catch (err) {
     showError(err);
@@ -70,6 +101,7 @@ retryBtn.addEventListener('click', () => startCamera());
 // e apaga o indicador de câmera) e religa ao voltar.
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
+    renderer?.stop();
     camera.cancel();
   } else if (app.dataset.state !== 'error') {
     startCamera();
