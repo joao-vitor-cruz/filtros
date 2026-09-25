@@ -1,6 +1,6 @@
 # Filtros
 
-Câmera web, mobile-first, com filtros coloridos em tempo real e paletas escolhidas pelo usuário. O planejamento completo está em [PLANO.md](PLANO.md).
+Câmera web, mobile-first, com filtros coloridos em tempo real e paletas escolhidas pelo usuário. O planejamento completo está em [PLANO.md](PLANO.md) e os bugs e pendências conhecidos em [BUGS.md](BUGS.md).
 
 **Versão publicada:** https://joao-vitor-cruz.github.io/filtros/ (atualizada automaticamente a cada push na `main`).
 

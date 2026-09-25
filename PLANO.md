@@ -136,7 +136,14 @@ type Adjustments = {         // globais, salvos no navegador
 3. Câmera frontal: a foto sai espelhada, como o usuário viu no preview; dá para desligar no painel de ajustes.
 4. **Tela da foto**: a única ação é **Salvar**. Um X discreto no canto volta para a câmera descartando a foto. Não há compartilhar, excluir nem galeria.
 5. Salvar: no iPhone/iPad abre a folha do sistema (onde "Salvar imagem" leva a foto para o app Fotos, único caminho no Safari); nos demais, faz o download do JPEG. Depois de salvar, volta para a câmera com o aviso "Foto salva".
-## 7. Paletas prontas (sugestão inicial)
+## 6b. Foto da galeria
+
+1. Botão de galeria à esquerda do disparo (e na tela de erro da câmera, para quem negou a permissão). Abre o seletor do sistema (`<input type="file" accept="image/*">`).
+2. A foto é desenhada num canvas (o que aplica a orientação gravada pela câmera) e reduzida se o maior lado passar de 4096 px.
+3. A câmera desliga; o preview mostra a foto inteira (com faixas pretas se a proporção for diferente) e todos os filtros, a intensidade e os ajustes funcionam ao vivo.
+4. O botão de disparo vira **Salvar**: salva a foto em resolução cheia com o filtro, sem espelhar, e continua na foto para salvar outras versões. O X no topo volta para a câmera.
+
+ (sugestão inicial)
 
 | Nome | Cores | Modo |
 |------|-------|------|

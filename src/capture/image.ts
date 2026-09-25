@@ -48,3 +48,35 @@ export function captureVideoFrame(video: HTMLVideoElement, mirrored: boolean): I
   ctx.drawImage(video, 0, 0, width, height);
   return ctx.getImageData(0, 0, width, height);
 }
+
+/** Tamanho que cabe em `maxSide` mantendo a proporção (nunca amplia). */
+export function fitWithin(width: number, height: number, maxSide: number): [number, number] {
+  const scale = Math.min(1, maxSide / Math.max(width, height));
+  return [Math.max(1, Math.round(width * scale)), Math.max(1, Math.round(height * scale))];
+}
+
+/**
+ * Abre uma foto escolhida pelo usuário e devolve um canvas pronto para o filtro.
+ * O <img> já aplica a orientação gravada pela câmera (fotos tiradas em pé);
+ * fotos maiores que `maxSide` são reduzidas para caber na GPU e na memória.
+ */
+export async function loadImageFile(file: Blob, maxSide: number): Promise<HTMLCanvasElement> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = url;
+    await img.decode();
+    const [width, height] = fitWithin(img.naturalWidth, img.naturalHeight, maxSide);
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas 2D indisponível');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, width, height);
+    return canvas;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}

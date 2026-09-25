@@ -38,6 +38,9 @@
             <path d="M14.5 9.6v1.9h-1.9M9.5 17.4v-1.9h1.9" />
           </svg>
         </button>
+        <button class="icon-btn" id="gallery-close" type="button" aria-label="Voltar para a câmera" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
       </header>
 
       <div class="status" id="loading" role="status">
@@ -49,6 +52,7 @@
         <h1 id="error-title"></h1>
         <p id="error-message"></p>
         <button class="primary-btn" id="retry" type="button">Tentar novamente</button>
+        <button class="ghost-btn" id="error-gallery" type="button">Usar uma foto da galeria</button>
       </section>
 
       <footer class="bottom-bar">
@@ -59,8 +63,17 @@
         </label>
         <div class="palette-picker" id="palette-picker"></div>
         <div class="shutter-row">
+          <button class="icon-btn gallery-btn" id="open-gallery" type="button" aria-label="Escolher foto da galeria">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="16" rx="3" />
+              <circle cx="9" cy="10" r="1.8" />
+              <path d="M21 16l-5-5-8 9" />
+            </svg>
+          </button>
           <button class="shutter" id="shutter" type="button" aria-label="Tirar foto" disabled></button>
+          <button class="primary-btn gallery-save" id="gallery-save" type="button" hidden>Salvar</button>
         </div>
+        <input id="gallery-input" type="file" accept="image/*" hidden />
       </footer>
 
       <div class="flash" id="flash" aria-hidden="true"></div>

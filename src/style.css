@@ -308,9 +308,36 @@ body {
 
 /* ---------- Disparo ---------- */
 
+/* Galeria à esquerda, disparo (ou Salvar) no centro, coluna vazia à direita para equilibrar. */
 .shutter-row {
-  display: flex;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  min-height: 76px;
+}
+
+.gallery-btn {
+  justify-self: center;
+}
+
+.gallery-btn svg {
+  stroke-width: 1.7;
+}
+
+.shutter,
+.gallery-save {
+  grid-column: 2;
+}
+
+.gallery-save {
+  min-width: 160px;
+  min-height: 56px;
+  margin: 0;
+  font-size: 1.0625rem;
+}
+
+.gallery-save:disabled {
+  opacity: 0.6;
 }
 
 .shutter {
@@ -1089,4 +1116,9 @@ fieldset.field legend {
 .app[data-state='error'] .top-bar,
 .app[data-state='error'] .bottom-bar {
   display: none;
+}
+
+/* Na tela de erro, a galeria é a alternativa à câmera. */
+.status .ghost-btn {
+  border-style: solid;
 }

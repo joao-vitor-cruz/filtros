@@ -28,7 +28,7 @@ import { onHorizontalSwipe } from './ui/swipe';
 import { PalettePicker } from './ui/palette-picker';
 import { PaletteEditor, type PaletteDraft } from './ui/palette-editor';
 import { SettingsPanel } from './ui/settings';
-import { captureVideoFrame, encodeJpeg, photoFileName } from './capture/image';
+import { captureVideoFrame, encodeJpeg, loadImageFile, photoFileName } from './capture/image';
 import { savePhoto } from './capture/save';
 
 type AppState = 'loading' | 'running' | 'error';
@@ -62,6 +62,11 @@ const notice = $<HTMLElement>('#notice');
 const editorRoot = $<HTMLElement>('#editor');
 const settingsRoot = $<HTMLElement>('#settings');
 const settingsBtn = $<HTMLButtonElement>('#open-settings');
+const galleryBtn = $<HTMLButtonElement>('#open-gallery');
+const galleryInput = $<HTMLInputElement>('#gallery-input');
+const gallerySaveBtn = $<HTMLButtonElement>('#gallery-save');
+const galleryCloseBtn = $<HTMLButtonElement>('#gallery-close');
+const errorGalleryBtn = $<HTMLButtonElement>('#error-gallery');
 
 const camera = new Camera(video);
 let cameraCount = 0;
@@ -407,11 +412,17 @@ function updateMirror(): void {
 }
 
 async function startCamera(facing = camera.facing): Promise<void> {
+  if (usingGallery) return;
   setState('loading');
   renderer?.stop();
   try {
     await camera.start(facing);
     if (!camera.active) return; // substituído por uma chamada mais recente
+    if (usingGallery) {
+      // O usuário escolheu uma foto enquanto a câmera abria.
+      camera.cancel();
+      return;
+    }
     // Só depois da permissão o navegador revela quantas câmeras existem.
     cameraCount = await countVideoInputs();
     switchBtn.hidden = cameraCount < 2;
@@ -437,9 +448,79 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     renderer?.stop();
     camera.cancel();
-  } else if (app.dataset.state !== 'error') {
+  } else if (app.dataset.state !== 'error' && !usingGallery) {
     startCamera();
   }
 });
+
+// ---------- Foto da galeria ----------
+
+/** true enquanto o preview mostra uma foto da galeria em vez da câmera. */
+let usingGallery = false;
+
+function updateSourceUi(): void {
+  app.dataset.source = usingGallery ? 'gallery' : 'camera';
+  shutterBtn.hidden = usingGallery;
+  gallerySaveBtn.hidden = !usingGallery;
+  galleryCloseBtn.hidden = !usingGallery;
+  switchBtn.hidden = usingGallery || cameraCount < 2;
+}
+
+async function openGalleryFile(file: File): Promise<void> {
+  if (!renderer || photo || app.dataset.sheet) return;
+  try {
+    const image = await loadImageFile(file, renderer.maxImageSide);
+    usingGallery = true;
+    camera.cancel(); // desliga a câmera (e o indicador dela) enquanto edita a foto
+    renderer.setImage(image);
+    updateSourceUi();
+    setState('running');
+    gallerySaveBtn.focus();
+  } catch (err) {
+    console.error(err);
+    showNotice('Não foi possível abrir essa imagem');
+  }
+}
+
+function backToCamera(): void {
+  if (!usingGallery) return;
+  usingGallery = false;
+  renderer?.useCamera();
+  updateSourceUi();
+  startCamera();
+}
+
+async function saveGalleryPhoto(): Promise<void> {
+  if (!renderer || !usingGallery) return;
+  gallerySaveBtn.disabled = true;
+  try {
+    const image = renderer.capture();
+    if (!image) throw new Error('Sem imagem');
+    const result = await savePhoto(await encodeJpeg(image), photoFileName());
+    // Continua na foto: dá para salvar outra versão com outro filtro.
+    if (result === 'saved') showNotice('Foto salva');
+  } catch (err) {
+    console.error(err);
+    showNotice('Não foi possível salvar');
+  } finally {
+    gallerySaveBtn.disabled = false;
+  }
+}
+
+const pickFromGallery = () => galleryInput.click();
+galleryBtn.addEventListener('click', pickFromGallery);
+errorGalleryBtn.addEventListener('click', pickFromGallery);
+galleryInput.addEventListener('change', () => {
+  const file = galleryInput.files?.[0];
+  galleryInput.value = ''; // permite escolher a mesma foto de novo
+  if (file) openGalleryFile(file);
+});
+gallerySaveBtn.addEventListener('click', saveGalleryPhoto);
+galleryCloseBtn.addEventListener('click', backToCamera);
+
+// Sem WebGL não há filtros para aplicar numa foto.
+galleryBtn.hidden = !renderer;
+errorGalleryBtn.hidden = !renderer;
+updateSourceUi();
 
 startCamera('environment');

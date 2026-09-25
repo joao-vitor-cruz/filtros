@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canvasSize, coverScale } from './cover';
+import { canvasSize, containRect, coverScale } from './cover';
 
 describe('coverScale', () => {
   it('não corta quando as proporções são iguais', () => {
@@ -48,5 +48,24 @@ describe('canvasSize', () => {
 
   it('nunca devolve tamanho zero', () => {
     expect(canvasSize(0, 0, 1)).toEqual([1, 1]);
+  });
+});
+
+describe('containRect', () => {
+  it('foto em pé numa tela em pé mais alta: faixas em cima e embaixo', () => {
+    // 3:4 numa tela 390×844
+    expect(containRect(3000, 4000, 390, 844)).toEqual({ x: 0, y: 162, width: 390, height: 520 });
+  });
+
+  it('foto deitada numa tela em pé: faixas maiores em cima e embaixo', () => {
+    expect(containRect(4000, 3000, 390, 844)).toEqual({ x: 0, y: 275, width: 390, height: 293 });
+  });
+
+  it('foto estreita numa tela larga: faixas nas laterais', () => {
+    expect(containRect(1000, 2000, 1000, 500)).toEqual({ x: 375, y: 0, width: 250, height: 500 });
+  });
+
+  it('mesma proporção ocupa tudo', () => {
+    expect(containRect(1920, 1080, 960, 540)).toEqual({ x: 0, y: 0, width: 960, height: 540 });
   });
 });

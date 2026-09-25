@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { flipRows, photoFileName } from './image';
+import { fitWithin, flipRows, photoFileName } from './image';
 import { isIOS } from './save';
 
 describe('flipRows', () => {
@@ -32,5 +32,16 @@ describe('isIOS', () => {
   it('não confunde Mac e Android', () => {
     expect(isIOS(nav('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', 0))).toBe(false);
     expect(isIOS(nav('Mozilla/5.0 (Linux; Android 15; Pixel 9)', 5))).toBe(false);
+  });
+});
+
+describe('fitWithin', () => {
+  it('reduz fotos grandes mantendo a proporção', () => {
+    expect(fitWithin(8000, 6000, 4096)).toEqual([4096, 3072]);
+    expect(fitWithin(3000, 9000, 4096)).toEqual([1365, 4096]);
+  });
+
+  it('não amplia fotos pequenas', () => {
+    expect(fitWithin(1200, 800, 4096)).toEqual([1200, 800]);
   });
 });

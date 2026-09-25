@@ -1,6 +1,6 @@
 import vertexSource from './quad.vert.glsl?raw';
 import fragmentSource from './filter.frag.glsl?raw';
-import { canvasSize, coverScale } from './cover';
+import { canvasSize, containRect, coverScale, type Rect } from './cover';
 import { buildGradient, GRADIENT_SIZE, MAX_COLORS, parseHex } from '../palette/palette';
 import { DEFAULT_ADJUSTMENTS, MODE_INDEX, type Adjustments, type FilterMode } from '../filter';
 import { flipRows } from '../capture/image';
@@ -30,14 +30,23 @@ const UNIFORMS = [
   'uSeed',
 ] as const;
 
+/** Foto fixa (da galeria) já decodificada, com a orientação corrigida. */
+export type StillImage = HTMLCanvasElement | ImageBitmap;
+
+type Source = { kind: 'video' } | { kind: 'image'; image: StillImage };
+
+/** Maior lado aceito para fotos da galeria (memória e limite de canvas do iPhone). */
+const MAX_IMAGE_SIDE = 4096;
+
 // Um único triângulo maior que a tela: mais simples que dois e sem costura diagonal.
 const FULLSCREEN_TRIANGLE = new Float32Array([-1, -1, 3, -1, -1, 3]);
 
 export class RendererError extends Error {}
 
 /**
- * Desenha o vídeo da câmera num <canvas> via WebGL, aplicando o shader de filtro.
- * O <video> continua tocando (fora de vista) só como fonte dos frames.
+ * Desenha a imagem num <canvas> via WebGL, aplicando o shader de filtro.
+ * A fonte é o vídeo da câmera (o <video> continua tocando fora de vista só
+ * como fonte dos frames) ou uma foto fixa escolhida na galeria.
  */
 export class Renderer {
   readonly gl: GL;
@@ -53,6 +62,7 @@ export class Renderer {
   private colorCount = 2;
   private mode: FilterMode = 'gradient';
   private seed = 0;
+  private source: Source = { kind: 'video' };
   private res: Program | null = null;
   private running = false;
   private frameHandle = 0;
@@ -87,6 +97,8 @@ export class Renderer {
     });
     canvas.addEventListener('webglcontextrestored', () => {
       this.res = this.setup();
+      this.uploadImage();
+      this.draw();
     });
 
     this.resizeObserver = new ResizeObserver(() => this.resize());
@@ -116,8 +128,31 @@ export class Renderer {
     this.draw();
   }
 
+  /** Maior lado que uma foto da galeria pode ter para caber numa textura. */
+  get maxImageSide(): number {
+    const { gl } = this;
+    return Math.min(MAX_IMAGE_SIDE, gl.getParameter(gl.MAX_TEXTURE_SIZE), gl.getParameter(gl.MAX_RENDERBUFFER_SIZE));
+  }
+
+  get showingImage(): boolean {
+    return this.source.kind === 'image';
+  }
+
+  /** Passa a mostrar uma foto fixa (galeria). Para o loop da câmera. */
+  setImage(image: StillImage): void {
+    this.stop();
+    this.source = { kind: 'image', image };
+    this.uploadImage();
+    this.draw();
+  }
+
+  /** Volta a usar a câmera como fonte. O loop recomeça com start(). */
+  useCamera(): void {
+    this.source = { kind: 'video' };
+  }
+
   start(): void {
-    if (this.running) return;
+    if (this.running || this.source.kind === 'image') return;
     this.running = true;
     this.scheduleFrame();
   }
@@ -132,24 +167,33 @@ export class Renderer {
     this.videoFrameHandle = 0;
   }
 
-  /** Desenha o frame atual do vídeo. Retorna false se ainda não há imagem. */
+  /** Desenha a imagem atual na tela. Retorna false se ainda não há imagem. */
   draw(): boolean {
     const { width, height } = this.canvas;
-    return this.render(width, height, coverScale(this.video.videoWidth, this.video.videoHeight, width, height));
+    const full = { x: 0, y: 0, width, height };
+    if (this.source.kind === 'image') {
+      // Foto da galeria aparece inteira, com faixas pretas se a proporção for diferente.
+      const [iw, ih] = this.sourceSize();
+      return this.render(width, height, containRect(iw, ih, width, height), [1, 1], false);
+    }
+    return this.render(width, height, full, coverScale(this.video.videoWidth, this.video.videoHeight, width, height));
   }
 
   /**
-   * Gera a foto: renderiza o frame atual com o filtro num framebuffer do
-   * tamanho nativo do vídeo (quadro inteiro, sem o corte da tela) e lê os pixels.
+   * Gera a foto: renderiza a imagem atual com o filtro num framebuffer do
+   * tamanho nativo da fonte (quadro inteiro, sem o corte da tela) e lê os pixels.
    */
   capture({ mirrored = this.mirrored }: { mirrored?: boolean } = {}): ImageData | null {
-    const { gl, video, res } = this;
+    const { gl, res } = this;
     if (!res || gl.isContextLost() || !this.hasFrame()) return null;
 
+    const [sourceWidth, sourceHeight] = this.sourceSize();
     const limit = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE), gl.getParameter(gl.MAX_RENDERBUFFER_SIZE));
-    const scale = Math.min(1, limit / Math.max(video.videoWidth, video.videoHeight));
-    const width = Math.floor(video.videoWidth * scale);
-    const height = Math.floor(video.videoHeight * scale);
+    const scale = Math.min(1, limit / Math.max(sourceWidth, sourceHeight));
+    const width = Math.floor(sourceWidth * scale);
+    const height = Math.floor(sourceHeight * scale);
+    // Fotos da galeria nunca são espelhadas.
+    const mirror = this.source.kind === 'video' && mirrored;
 
     const target = createTexture(gl, 2);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
@@ -160,7 +204,7 @@ export class Renderer {
 
     try {
       if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) return null;
-      if (!this.render(width, height, [1, 1], mirrored)) return null;
+      if (!this.render(width, height, { x: 0, y: 0, width, height }, [1, 1], mirror)) return null;
       const pixels = new Uint8Array(width * height * 4);
       gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
       // O WebGL lê de baixo para cima; a imagem começa pela linha de cima.
@@ -169,25 +213,57 @@ export class Renderer {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.deleteFramebuffer(framebuffer);
       gl.deleteTexture(target);
+      // A textura da foto fica na unidade 0; volta a ligá-la para os próximos desenhos.
+      gl.bindTexture(gl.TEXTURE_2D, res.texture);
     }
   }
 
+  private sourceSize(): [number, number] {
+    if (this.source.kind === 'image') return [this.source.image.width, this.source.image.height];
+    return [this.video.videoWidth, this.video.videoHeight];
+  }
+
   private hasFrame(): boolean {
+    if (this.source.kind === 'image') return true;
     const { video } = this;
     return video.readyState >= video.HAVE_CURRENT_DATA && video.videoWidth > 0;
   }
 
-  private render(width: number, height: number, [sx, sy]: [number, number], mirrored = this.mirrored): boolean {
+  /** Envia a foto fixa para a GPU uma única vez (o vídeo é enviado a cada frame). */
+  private uploadImage(): void {
+    const { gl, res, source } = this;
+    if (!res || gl.isContextLost() || source.kind !== 'image') return;
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, res.texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source.image);
+  }
+
+  private render(
+    targetWidth: number,
+    targetHeight: number,
+    viewport: Rect,
+    [sx, sy]: [number, number],
+    mirrored = this.mirrored,
+  ): boolean {
     const { gl, video, res } = this;
     if (!res || gl.isContextLost() || !this.hasFrame()) return false;
 
     gl.bindTexture(gl.TEXTURE_2D, res.texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+    if (this.source.kind === 'video') {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+    }
+
+    // Fundo preto nas faixas quando a imagem não ocupa a área toda.
+    if (viewport.width !== targetWidth || viewport.height !== targetHeight) {
+      gl.viewport(0, 0, targetWidth, targetHeight);
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
 
     const u = res.uniforms;
     const { contrast, saturation, vignette, grain } = this.adjustments;
     this.seed = (this.seed + 1) % 97;
-    gl.viewport(0, 0, width, height);
+    gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
     gl.uniform2f(u.uCoverScale, sx, sy);
     gl.uniform1f(u.uMirror, mirrored ? 1 : 0);
     gl.uniform1f(u.uIntensity, this.intensity);
@@ -238,7 +314,7 @@ export class Renderer {
     if (this.canvas.width !== w || this.canvas.height !== h) {
       this.canvas.width = w;
       this.canvas.height = h;
-      // Com o vídeo pausado (ex.: girando a tela), redesenha para não esticar o último frame.
+      // Com o vídeo pausado ou uma foto fixa (ex.: girando a tela), redesenha para não esticar a imagem.
       this.draw();
     }
   }
