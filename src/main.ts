@@ -2,6 +2,9 @@ import { Camera, CameraError, countVideoInputs } from './camera';
 import { errorMessages } from './messages';
 import { Renderer } from './renderer/renderer';
 import { FpsMeter } from './fps';
+import { filterOptions, loadSelectedId, saveSelectedId, wrapIndex } from './state';
+import { cssGradient } from './palette/palette';
+import { onHorizontalSwipe } from './ui/swipe';
 
 type AppState = 'loading' | 'running' | 'error';
 
@@ -17,6 +20,10 @@ const errorBox = $<HTMLElement>('#error');
 const errorTitle = $<HTMLElement>('#error-title');
 const errorMessage = $<HTMLElement>('#error-message');
 const retryBtn = $<HTMLButtonElement>('#retry');
+const toast = $<HTMLElement>('#filter-toast');
+const toastSwatch = $<HTMLElement>('#filter-swatch');
+const toastName = $<HTMLElement>('#filter-name');
+const hint = $<HTMLElement>('#hint');
 
 const camera = new Camera(video);
 let cameraCount = 0;
@@ -43,6 +50,48 @@ if (renderer && new URLSearchParams(location.search).has('debug')) {
       `${meter.fps.toFixed(0)} fps · ${app.dataset.render}\n` +
       `vídeo ${video.videoWidth}×${video.videoHeight} · tela ${canvas.width}×${canvas.height}`;
   });
+}
+
+// Filtros: "Original" + paletas prontas. Começa no último usado ou na primeira paleta.
+const options = filterOptions();
+let selected = options.findIndex((o) => o.id === loadSelectedId());
+if (selected < 0) selected = 1;
+let toastTimer = 0;
+
+function selectFilter(index: number, announce: boolean): void {
+  selected = index;
+  const option = options[index];
+  if (renderer) {
+    if (option.palette) renderer.setPalette(option.palette.colors);
+    renderer.intensity = option.palette ? 1 : 0;
+  }
+  saveSelectedId(option.id);
+  if (!announce) return;
+
+  toastName.textContent = option.name;
+  toastSwatch.style.background = option.palette
+    ? cssGradient(option.palette.colors, '135deg')
+    : 'transparent';
+  toast.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => toast.classList.remove('visible'), 1200);
+}
+
+function stepFilter(direction: 1 | -1): void {
+  if (app.dataset.state !== 'running') return;
+  hint.classList.add('done');
+  selectFilter(wrapIndex(selected, direction, options.length), true);
+}
+
+if (renderer) {
+  selectFilter(selected, false);
+  onHorizontalSwipe(canvas, stepFilter);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') stepFilter(1);
+    else if (e.key === 'ArrowLeft') stepFilter(-1);
+  });
+} else {
+  hint.hidden = true;
 }
 
 function setState(state: AppState): void {

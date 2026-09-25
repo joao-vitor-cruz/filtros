@@ -1,6 +1,7 @@
 import vertexSource from './quad.vert.glsl?raw';
 import fragmentSource from './filter.frag.glsl?raw';
 import { canvasSize, coverScale } from './cover';
+import { buildGradient, GRADIENT_SIZE } from '../palette/palette';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -8,10 +9,11 @@ type Program = {
   program: WebGLProgram;
   buffer: WebGLBuffer;
   texture: WebGLTexture;
+  paletteTexture: WebGLTexture;
   aPosition: number;
   uCoverScale: WebGLUniformLocation | null;
   uMirror: WebGLUniformLocation | null;
-  uVideo: WebGLUniformLocation | null;
+  uIntensity: WebGLUniformLocation | null;
 };
 
 // Um único triângulo maior que a tela: mais simples que dois e sem costura diagonal.
@@ -26,7 +28,10 @@ export class RendererError extends Error {}
 export class Renderer {
   readonly gl: GL;
   mirrored = false;
+  /** 0 = imagem original, 1 = filtro completo. */
+  intensity = 1;
 
+  private palette: Uint8Array = buildGradient(['#000000', '#ffffff']);
   private res: Program | null = null;
   private running = false;
   private frameHandle = 0;
@@ -77,6 +82,13 @@ export class Renderer {
     this.onFrame = listener;
   }
 
+  /** Troca as cores do filtro. Vale a partir do próximo frame. */
+  setPalette(colors: string[]): void {
+    this.palette = buildGradient(colors);
+    this.uploadPalette();
+    this.draw();
+  }
+
   start(): void {
     if (this.running) return;
     this.running = true;
@@ -106,6 +118,7 @@ export class Renderer {
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.uniform2f(res.uCoverScale, sx, sy);
     gl.uniform1f(res.uMirror, this.mirrored ? 1 : 0);
+    gl.uniform1f(res.uIntensity, this.intensity);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     return true;
   }
@@ -116,6 +129,7 @@ export class Renderer {
     const { gl, res } = this;
     if (res && !gl.isContextLost()) {
       gl.deleteTexture(res.texture);
+      gl.deleteTexture(res.paletteTexture);
       gl.deleteBuffer(res.buffer);
       gl.deleteProgram(res.program);
     }
@@ -162,29 +176,48 @@ export class Renderer {
     gl.enableVertexAttribArray(aPosition);
     gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
 
-    const texture = gl.createTexture();
-    if (!texture) throw new RendererError('Falha ao criar textura');
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    // Vídeo não tem tamanho potência de 2: sem mipmap e com CLAMP (exigência do WebGL 1).
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    // Unidade 1: paleta. Unidade 0 (vídeo) fica ativa, pois é reenviada a cada frame.
+    const paletteTexture = createTexture(gl, 1);
+    const texture = createTexture(gl, 0);
 
-    const uVideo = gl.getUniformLocation(program, 'uVideo');
-    gl.uniform1i(uVideo, 0);
+    gl.uniform1i(gl.getUniformLocation(program, 'uVideo'), 0);
+    gl.uniform1i(gl.getUniformLocation(program, 'uPalette'), 1);
 
-    return {
+    this.res = {
       program,
       buffer,
       texture,
+      paletteTexture,
       aPosition,
       uCoverScale: gl.getUniformLocation(program, 'uCoverScale'),
       uMirror: gl.getUniformLocation(program, 'uMirror'),
-      uVideo,
+      uIntensity: gl.getUniformLocation(program, 'uIntensity'),
     };
+    this.uploadPalette();
+    return this.res;
   }
+
+  private uploadPalette(): void {
+    const { gl, res } = this;
+    if (!res || gl.isContextLost()) return;
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, res.paletteTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, GRADIENT_SIZE, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, this.palette);
+    gl.activeTexture(gl.TEXTURE0);
+  }
+}
+
+/** Textura sem mipmap e com CLAMP: o vídeo não tem tamanho potência de 2 (exigência do WebGL 1). */
+function createTexture(gl: GL, unit: number): WebGLTexture {
+  const texture = gl.createTexture();
+  if (!texture) throw new RendererError('Falha ao criar textura');
+  gl.activeTexture(gl.TEXTURE0 + unit);
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return texture;
 }
 
 function compileShader(gl: GL, type: number, source: string): WebGLShader {

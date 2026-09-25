@@ -18,6 +18,11 @@
       <canvas class="preview" role="img" aria-label="Imagem da câmera"></canvas>
       <output class="fps" id="fps" hidden></output>
 
+      <div class="filter-toast" id="filter-toast" aria-live="polite">
+        <span class="filter-swatch" id="filter-swatch"></span>
+        <span id="filter-name"></span>
+      </div>
+
       <header class="top-bar">
         <button class="icon-btn" id="switch-camera" type="button" aria-label="Trocar câmera" hidden>
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -41,6 +46,7 @@
 
       <footer class="bottom-bar">
         <!-- Carrossel de paletas e botão de disparo chegam nas fases 4 e 5. -->
+        <p class="hint" id="hint">Deslize para os lados para trocar o filtro</p>
       </footer>
     </main>
     <script type="module" src="/src/main.ts"></script>

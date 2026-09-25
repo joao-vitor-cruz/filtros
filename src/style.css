@@ -88,8 +88,60 @@ body {
 .top-bar,
 .bottom-bar,
 .status,
-.fps {
+.fps,
+.filter-toast {
   z-index: 2;
+}
+
+/* Permite deslizar sobre o preview sem o navegador rolar ou dar zoom. */
+.preview {
+  touch-action: none;
+}
+
+.filter-toast {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 10px 10px;
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-weight: 600;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.96);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.filter-toast.visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.filter-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgb(255 255 255 / 0.8);
+  background: #888;
+}
+
+.hint {
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--glass);
+  color: var(--fg-muted);
+  font-size: 0.875rem;
+  transition: opacity 400ms ease;
+}
+
+.hint.done {
+  opacity: 0;
 }
 
 .fps {
@@ -230,7 +282,8 @@ body {
     animation-duration: 2s;
   }
   .preview,
-  .icon-btn {
+  .icon-btn,
+  .filter-toast {
     transition: none;
   }
 }
