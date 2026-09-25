@@ -52,3 +52,4 @@ Todos os testes foram no Chromium com câmera falsa e GPU emulada. Falta confirm
 | 4 | Nomes das paletas cortados no carrossel ("Synthwa…") | Cada item com a largura do próprio nome |
 | 4 | Primeiro item do carrossel não centralizava | Espaço lateral passou a considerar a margem da tela |
 | 7 | Barra de pré-visualização do editor espremida até virar uma linha | Itens das folhas não encolhem; o painel rola |
+| Galeria | Círculos do carrossel pareciam cortados nas beiradas (o degradê se repetia embaixo da borda) | Anel feito com sombra interna; círculos maiores (56 → 64 px) |

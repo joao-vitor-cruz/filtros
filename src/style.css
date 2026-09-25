@@ -232,7 +232,7 @@ body {
   display: flex;
   gap: 4px;
   /* Espaço nas pontas para o primeiro e o último item poderem ficar no centro. */
-  padding: 4px calc(50% + 16px - 34px);
+  padding: 6px calc(50% + 16px - 38px);
   margin: 0 calc(-16px - var(--safe-right)) 0 calc(-16px - var(--safe-left));
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -251,7 +251,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  min-width: 68px;
+  min-width: 76px;
   padding: 0 4px;
   border: 0;
   background: none;
@@ -264,11 +264,13 @@ body {
 }
 
 .palette-swatch {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  border: 2px solid rgb(255 255 255 / 0.35);
-  transition: transform 150ms ease, border-color 150ms ease;
+  /* O anel é uma sombra interna, não uma borda: assim o degradê preenche o círculo
+     inteiro, em vez de se repetir embaixo da borda e parecer cortado nas beiradas. */
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.35);
+  transition: transform 150ms ease, box-shadow 150ms ease;
 }
 
 /* "Original": meio preto, meio branco com uma diagonal, indicando "sem filtro". */
@@ -289,7 +291,7 @@ body {
 }
 
 .palette-item[aria-checked='true'] .palette-swatch {
-  border: 3px solid var(--fg);
+  box-shadow: inset 0 0 0 3px var(--fg);
   transform: scale(1.08);
 }
 
@@ -466,7 +468,8 @@ body {
 .palette-add .palette-swatch {
   display: grid;
   place-items: center;
-  border-style: dashed;
+  border: 2px dashed rgb(255 255 255 / 0.5);
+  box-shadow: none;
   background: var(--glass);
 }
 
