@@ -30,6 +30,7 @@ import { PaletteEditor, type PaletteDraft } from './ui/palette-editor';
 import { SettingsPanel } from './ui/settings';
 import { captureVideoFrame, encodeJpeg, photoFileName } from './capture/image';
 import { savePhoto } from './capture/save';
+import { registerServiceWorker } from './pwa';
 
 type AppState = 'loading' | 'running' | 'error';
 
@@ -86,7 +87,7 @@ if (renderer && new URLSearchParams(location.search).has('debug')) {
     lastUpdate = now;
     fpsLabel.textContent =
       `${meter.fps.toFixed(0)} fps · ${app.dataset.render}\n` +
-      `vídeo ${video.videoWidth}×${video.videoHeight} · tela ${canvas.width}×${canvas.height}`;
+      `vídeo ${video.videoWidth}×${video.videoHeight} · tela ${canvas.width}×${canvas.height} (máx ${renderer!.maxDpr}x)`;
   });
 }
 
@@ -443,3 +444,4 @@ document.addEventListener('visibilitychange', () => {
 });
 
 startCamera('environment');
+registerServiceWorker();
