@@ -2,6 +2,8 @@
 
 Câmera web, mobile-first, com filtros coloridos em tempo real e paletas escolhidas pelo usuário. O planejamento completo está em [PLANO.md](PLANO.md).
 
+**Versão publicada:** https://joao-vitor-cruz.github.io/filtros/ (atualizada automaticamente a cada push na `main`).
+
 ## Rodando
 
 ```bash
