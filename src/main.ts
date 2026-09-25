@@ -2,9 +2,17 @@ import { Camera, CameraError, countVideoInputs } from './camera';
 import { errorMessages } from './messages';
 import { Renderer } from './renderer/renderer';
 import { FpsMeter } from './fps';
-import { filterOptions, loadSelectedId, saveSelectedId, wrapIndex } from './state';
+import {
+  filterOptions,
+  loadIntensity,
+  loadSelectedId,
+  saveIntensity,
+  saveSelectedId,
+  wrapIndex,
+} from './state';
 import { cssGradient } from './palette/palette';
 import { onHorizontalSwipe } from './ui/swipe';
+import { PalettePicker } from './ui/palette-picker';
 
 type AppState = 'loading' | 'running' | 'error';
 
@@ -23,7 +31,10 @@ const retryBtn = $<HTMLButtonElement>('#retry');
 const toast = $<HTMLElement>('#filter-toast');
 const toastSwatch = $<HTMLElement>('#filter-swatch');
 const toastName = $<HTMLElement>('#filter-name');
-const hint = $<HTMLElement>('#hint');
+const pickerRoot = $<HTMLElement>('#palette-picker');
+const intensityRow = $<HTMLElement>('#intensity-row');
+const intensityInput = $<HTMLInputElement>('#intensity');
+const intensityValue = $<HTMLOutputElement>('#intensity-value');
 
 const camera = new Camera(video);
 let cameraCount = 0;
@@ -56,18 +67,31 @@ if (renderer && new URLSearchParams(location.search).has('debug')) {
 const options = filterOptions();
 let selected = options.findIndex((o) => o.id === loadSelectedId());
 if (selected < 0) selected = 1;
+let intensity = loadIntensity();
 let toastTimer = 0;
 
-function selectFilter(index: number, announce: boolean): void {
-  selected = index;
-  const option = options[index];
-  if (renderer) {
-    if (option.palette) renderer.setPalette(option.palette.colors);
-    renderer.intensity = option.palette ? 1 : 0;
-  }
-  saveSelectedId(option.id);
-  if (!announce) return;
+const picker = new PalettePicker(pickerRoot, options, (index) => selectFilter(index, false));
 
+function applyToRenderer(): void {
+  if (!renderer) return;
+  const option = options[selected];
+  // "Original" é o próprio filtro com intensidade zero.
+  renderer.intensity = option.palette ? intensity : 0;
+  renderer.draw();
+}
+
+function updateIntensityUi(): void {
+  const percent = Math.round(intensity * 100);
+  intensityInput.value = String(percent);
+  intensityInput.style.setProperty('--fill', `${percent}%`);
+  intensityValue.textContent = `${percent}%`;
+  const disabled = !options[selected].palette;
+  intensityInput.disabled = disabled;
+  intensityRow.classList.toggle('disabled', disabled);
+}
+
+function showToast(index: number): void {
+  const option = options[index];
   toastName.textContent = option.name;
   toastSwatch.style.background = option.palette
     ? cssGradient(option.palette.colors, '135deg')
@@ -77,21 +101,50 @@ function selectFilter(index: number, announce: boolean): void {
   toastTimer = window.setTimeout(() => toast.classList.remove('visible'), 1200);
 }
 
+/** `announce`: mostra o nome no meio da tela (útil ao deslizar, quando o carrossel não está em foco). */
+function selectFilter(index: number, announce: boolean, smooth = true): void {
+  selected = index;
+  const option = options[index];
+  if (renderer && option.palette) renderer.setPalette(option.palette.colors);
+  applyToRenderer();
+  picker.select(index, smooth);
+  updateIntensityUi();
+  saveSelectedId(option.id);
+  if (announce) showToast(index);
+}
+
 function stepFilter(direction: 1 | -1): void {
   if (app.dataset.state !== 'running') return;
-  hint.classList.add('done');
   selectFilter(wrapIndex(selected, direction, options.length), true);
 }
 
+intensityInput.addEventListener('input', () => {
+  intensity = Number(intensityInput.value) / 100;
+  updateIntensityUi();
+  applyToRenderer();
+});
+intensityInput.addEventListener('change', () => saveIntensity(intensity));
+
 if (renderer) {
-  selectFilter(selected, false);
+  selectFilter(selected, false, false);
   onHorizontalSwipe(canvas, stepFilter);
   document.addEventListener('keydown', (e) => {
+    // Não interfere quando o foco está no controle de intensidade ou no carrossel.
+    if (e.target instanceof HTMLInputElement || (e.target as Element).closest?.('.palette-picker')) return;
     if (e.key === 'ArrowRight') stepFilter(1);
     else if (e.key === 'ArrowLeft') stepFilter(-1);
   });
+  // Setas dentro do carrossel movem a seleção entre os itens (padrão de radiogroup).
+  pickerRoot.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    selectFilter(wrapIndex(selected, e.key === 'ArrowRight' ? 1 : -1, options.length), false);
+    pickerRoot.querySelector<HTMLElement>('[aria-checked="true"]')?.focus();
+  });
 } else {
-  hint.hidden = true;
+  // Sem WebGL não há filtros: esconde os controles que não teriam efeito.
+  pickerRoot.hidden = true;
+  intensityRow.hidden = true;
 }
 
 function setState(state: AppState): void {

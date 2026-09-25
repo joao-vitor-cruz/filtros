@@ -45,8 +45,13 @@
       </section>
 
       <footer class="bottom-bar">
-        <!-- Carrossel de paletas e botão de disparo chegam nas fases 4 e 5. -->
-        <p class="hint" id="hint">Deslize para os lados para trocar o filtro</p>
+        <label class="intensity" id="intensity-row">
+          <span class="intensity-label">Intensidade</span>
+          <input id="intensity" type="range" min="0" max="100" step="1" value="100" />
+          <output id="intensity-value" for="intensity">100%</output>
+        </label>
+        <div class="palette-picker" id="palette-picker"></div>
+        <!-- Botão de disparo chega na fase 5. -->
       </footer>
     </main>
     <script type="module" src="/src/main.ts"></script>

@@ -15,21 +15,38 @@ export function wrapIndex(index: number, delta: number, length: number): number 
   return (((index + delta) % length) + length) % length;
 }
 
-const STORAGE_KEY = 'filtros:filtro';
+// Preferências lembradas neste navegador. São só conveniência: se o
+// armazenamento estiver bloqueado (ex.: modo privado), o app segue sem elas.
+const FILTER_KEY = 'filtros:filtro';
+const INTENSITY_KEY = 'filtros:intensidade';
 
-/** Lembra o último filtro usado neste navegador (conveniência, pode falhar sem problema). */
-export function loadSelectedId(): string | null {
+function read(key: string): string | null {
   try {
-    return localStorage.getItem(STORAGE_KEY);
+    return localStorage.getItem(key);
   } catch {
     return null;
   }
 }
 
-export function saveSelectedId(id: string): void {
+function write(key: string, value: string): void {
   try {
-    localStorage.setItem(STORAGE_KEY, id);
+    localStorage.setItem(key, value);
   } catch {
     // modo privado ou armazenamento bloqueado
   }
 }
+
+export const loadSelectedId = (): string | null => read(FILTER_KEY);
+export const saveSelectedId = (id: string): void => write(FILTER_KEY, id);
+
+export const DEFAULT_INTENSITY = 1;
+
+/** Converte o valor salvo em intensidade de 0 a 1; usa o padrão se inválido. */
+export function parseIntensity(raw: string | null): number {
+  if (raw === null || raw.trim() === '') return DEFAULT_INTENSITY;
+  const value = Number(raw);
+  return Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : DEFAULT_INTENSITY;
+}
+
+export const loadIntensity = (): number => parseIntensity(read(INTENSITY_KEY));
+export const saveIntensity = (value: number): void => write(INTENSITY_KEY, String(value));

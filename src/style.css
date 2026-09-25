@@ -130,18 +130,176 @@ body {
   background: #888;
 }
 
-.hint {
-  margin: 0;
-  padding: 8px 14px;
+/* ---------- Intensidade ---------- */
+
+.intensity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--touch);
+  padding: 0 14px;
   border-radius: 999px;
   background: var(--glass);
-  color: var(--fg-muted);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   font-size: 0.875rem;
-  transition: opacity 400ms ease;
+  transition: opacity 200ms ease;
 }
 
-.hint.done {
-  opacity: 0;
+.intensity.disabled {
+  opacity: 0.4;
+}
+
+.intensity-label {
+  color: var(--fg-muted);
+}
+
+.intensity output {
+  min-width: 4ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.intensity input {
+  flex: 1;
+  min-width: 0;
+  height: var(--touch);
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  --fill: 100%;
+}
+
+.intensity input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--fg) var(--fill), rgb(255 255 255 / 0.3) var(--fill));
+}
+
+.intensity input::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--fg) var(--fill), rgb(255 255 255 / 0.3) var(--fill));
+}
+
+.intensity input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  margin-top: -10px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--fg);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+}
+
+.intensity input::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--fg);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+}
+
+.intensity input:focus-visible {
+  outline: none;
+}
+
+.intensity:has(input:focus-visible) {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
+/* ---------- Carrossel de paletas ---------- */
+
+.palette-picker {
+  display: flex;
+  gap: 4px;
+  /* Espaço nas pontas para o primeiro e o último item poderem ficar no centro. */
+  padding: 4px calc(50% + 16px - 34px);
+  margin: 0 calc(-16px - var(--safe-right)) 0 calc(-16px - var(--safe-left));
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.palette-picker::-webkit-scrollbar {
+  display: none;
+}
+
+.palette-item {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 68px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: 0.75rem;
+  letter-spacing: -0.01em;
+  scroll-snap-align: center;
+  cursor: pointer;
+}
+
+.palette-swatch {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid rgb(255 255 255 / 0.35);
+  transition: transform 150ms ease, border-color 150ms ease;
+}
+
+/* "Original": meio preto, meio branco com uma diagonal, indicando "sem filtro". */
+.palette-swatch.original {
+  background: linear-gradient(135deg, #3a3a3a 50%, #d9d9d9 50%);
+}
+
+.palette-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette-item[aria-checked='true'] {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.palette-item[aria-checked='true'] .palette-swatch {
+  border: 3px solid var(--fg);
+  transform: scale(1.08);
+}
+
+.palette-item:active .palette-swatch {
+  transform: scale(0.94);
+}
+
+.palette-item:focus-visible {
+  outline: none;
+}
+
+.palette-item:focus-visible .palette-swatch {
+  outline: 2px solid var(--fg);
+  outline-offset: 3px;
+}
+
+/* Tela larga (tablet/computador): controles numa coluna central. */
+@media (min-width: 640px) {
+  .intensity {
+    width: 100%;
+    max-width: 420px;
+    align-self: center;
+  }
 }
 
 .fps {
@@ -181,9 +339,13 @@ body {
 
 .bottom-bar {
   bottom: 0;
-  justify-content: center;
-  min-height: calc(120px + var(--safe-bottom));
-  padding-bottom: calc(16px + var(--safe-bottom));
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  padding-top: 40px;
+  padding-bottom: calc(20px + var(--safe-bottom));
+  /* Escurece levemente o fundo para os controles ficarem legíveis sobre qualquer imagem. */
+  background: linear-gradient(to top, rgb(0 0 0 / 0.55), rgb(0 0 0 / 0));
 }
 
 .icon-btn {
@@ -283,7 +445,9 @@ body {
   }
   .preview,
   .icon-btn,
-  .filter-toast {
+  .filter-toast,
+  .palette-swatch,
+  .intensity {
     transition: none;
   }
 }

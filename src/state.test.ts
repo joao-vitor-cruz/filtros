@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterOptions, wrapIndex } from './state';
+import { DEFAULT_INTENSITY, filterOptions, parseIntensity, wrapIndex } from './state';
 import { PRESETS } from './palette/presets';
 
 describe('filterOptions', () => {
@@ -16,5 +16,19 @@ describe('wrapIndex', () => {
     expect(wrapIndex(0, 1, 7)).toBe(1);
     expect(wrapIndex(6, 1, 7)).toBe(0);
     expect(wrapIndex(0, -1, 7)).toBe(6);
+  });
+});
+
+describe('parseIntensity', () => {
+  it('lê valores salvos e limita entre 0 e 1', () => {
+    expect(parseIntensity('0.4')).toBe(0.4);
+    expect(parseIntensity('3')).toBe(1);
+    expect(parseIntensity('-1')).toBe(0);
+  });
+
+  it('usa o padrão quando não há valor ou ele é inválido', () => {
+    expect(parseIntensity(null)).toBe(DEFAULT_INTENSITY);
+    expect(parseIntensity('')).toBe(DEFAULT_INTENSITY);
+    expect(parseIntensity('abc')).toBe(DEFAULT_INTENSITY);
   });
 });
