@@ -24,6 +24,13 @@
       </div>
 
       <header class="top-bar">
+        <button class="icon-btn" id="open-settings" type="button" aria-label="Ajustes">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+            <circle cx="16" cy="7" r="2" />
+            <circle cx="10" cy="17" r="2" />
+          </svg>
+        </button>
         <button class="icon-btn" id="switch-camera" type="button" aria-label="Trocar câmera" hidden>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M20 7h-3.2l-1.6-2H8.8L7.2 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Z" />
@@ -86,6 +93,11 @@
             <input id="editor-name" type="text" autocomplete="off" enterkeyhint="done" placeholder="Minha paleta" />
           </label>
 
+          <fieldset class="field">
+            <legend>Modo</legend>
+            <div class="mode-options" id="editor-modes"></div>
+          </fieldset>
+
           <div class="field">
             <span id="editor-colors-label">Cores <small>(da sombra para a luz)</small></span>
             <ol class="color-list" id="editor-colors" aria-labelledby="editor-colors-label"></ol>
@@ -97,6 +109,25 @@
             <button class="primary-btn" id="editor-save" type="submit">Salvar paleta</button>
           </footer>
         </form>
+      </section>
+
+      <section class="sheet" id="settings" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+        <div class="sheet-body">
+          <header class="sheet-header">
+            <h2 id="settings-title" tabindex="-1">Ajustes</h2>
+            <button class="ghost-btn compact" id="settings-reset" type="button">Restaurar</button>
+          </header>
+          <p class="sheet-hint">Valem para todos os filtros, exceto o Original. Toque duas vezes num controle para zerá-lo.</p>
+          <div class="adjust-list" id="settings-sliders"></div>
+          <label class="switch-row">
+            <span>
+              Espelhar fotos da câmera frontal
+              <small>Como aparece na tela, igual a um espelho</small>
+            </span>
+            <input id="settings-mirror" type="checkbox" role="switch" />
+          </label>
+          <button class="primary-btn" id="settings-done" type="button">Pronto</button>
+        </div>
       </section>
 
       <p class="notice" id="notice" role="status"></p>

@@ -1,11 +1,12 @@
 import { cssGradient, MAX_COLORS, MIN_COLORS, mixHex, normalizeHex } from '../palette/palette';
 import { MAX_NAME_LENGTH } from '../palette/storage';
+import { FILTER_MODES, type FilterMode } from '../filter';
 
-export type PaletteDraft = { name: string; colors: string[] };
+export type PaletteDraft = { name: string; colors: string[]; mode: FilterMode };
 
 type Callbacks = {
-  /** Chamado a cada mudança de cor, para o preview da câmera acompanhar. */
-  onPreview: (colors: string[]) => void;
+  /** Chamado a cada mudança de cor ou modo, para o preview da câmera acompanhar. */
+  onPreview: (colors: string[], mode: FilterMode) => void;
   onSave: (draft: PaletteDraft) => void;
   onDelete: () => void;
   onCancel: () => void;
@@ -15,13 +16,14 @@ const $ = <T extends HTMLElement>(root: HTMLElement, selector: string) => root.q
 
 /** Folha inferior para criar ou editar uma paleta de 2 a 5 cores. */
 export class PaletteEditor {
-  private draft: PaletteDraft = { name: '', colors: [] };
+  private draft: PaletteDraft = { name: '', colors: [], mode: 'gradient' };
   private readonly title: HTMLElement;
   private readonly gradient: HTMLElement;
   private readonly nameInput: HTMLInputElement;
   private readonly list: HTMLOListElement;
   private readonly addBtn: HTMLButtonElement;
   private readonly deleteBtn: HTMLButtonElement;
+  private readonly modeInputs: HTMLInputElement[];
 
   constructor(
     private readonly root: HTMLElement,
@@ -34,6 +36,7 @@ export class PaletteEditor {
     this.addBtn = $(root, '#editor-add');
     this.deleteBtn = $(root, '#editor-delete');
     this.nameInput.maxLength = MAX_NAME_LENGTH;
+    this.modeInputs = this.createModeOptions($(root, '#editor-modes'));
 
     this.nameInput.addEventListener('input', () => (this.draft.name = this.nameInput.value));
     this.addBtn.addEventListener('click', () => this.addColor());
@@ -41,7 +44,7 @@ export class PaletteEditor {
     $(root, '#editor-cancel').addEventListener('click', () => callbacks.onCancel());
     root.querySelector('form')!.addEventListener('submit', (e) => {
       e.preventDefault();
-      callbacks.onSave({ name: this.draft.name, colors: [...this.draft.colors] });
+      callbacks.onSave({ ...this.draft, colors: [...this.draft.colors] });
     });
     root.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -56,7 +59,8 @@ export class PaletteEditor {
   }
 
   open(initial: PaletteDraft, mode: 'create' | 'edit'): void {
-    this.draft = { name: initial.name, colors: initial.colors.map(normalizeHex) };
+    this.draft = { name: initial.name, colors: initial.colors.map(normalizeHex), mode: initial.mode };
+    this.modeInputs.forEach((input) => (input.checked = input.value === initial.mode));
     this.title.textContent = mode === 'create' ? 'Nova paleta' : 'Editar paleta';
     this.deleteBtn.hidden = mode === 'create';
     this.nameInput.value = initial.name;
@@ -72,7 +76,36 @@ export class PaletteEditor {
 
   private changed(): void {
     this.render();
-    this.callbacks.onPreview([...this.draft.colors]);
+    this.preview();
+  }
+
+  private preview(): void {
+    this.callbacks.onPreview([...this.draft.colors], this.draft.mode);
+  }
+
+  private createModeOptions(container: HTMLElement): HTMLInputElement[] {
+    return FILTER_MODES.map(({ id, label, description }) => {
+      const option = document.createElement('label');
+      option.className = 'mode-option';
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'editor-mode';
+      input.value = id;
+      input.addEventListener('change', () => {
+        if (!input.checked) return;
+        this.draft.mode = id;
+        this.preview();
+      });
+      const title = document.createElement('span');
+      title.className = 'mode-label';
+      title.textContent = label;
+      const hint = document.createElement('span');
+      hint.className = 'mode-description';
+      hint.textContent = description;
+      option.append(input, title, hint);
+      container.append(option);
+      return input;
+    });
   }
 
   private addColor(): void {
@@ -126,7 +159,7 @@ export class PaletteEditor {
       swatch.style.background = colors[index];
       hex.textContent = colors[index];
       this.gradient.style.background = cssGradient(colors);
-      this.callbacks.onPreview([...colors]);
+      this.preview();
     });
 
     const actions = document.createElement('span');

@@ -1,7 +1,8 @@
 import vertexSource from './quad.vert.glsl?raw';
 import fragmentSource from './filter.frag.glsl?raw';
 import { canvasSize, coverScale } from './cover';
-import { buildGradient, GRADIENT_SIZE } from '../palette/palette';
+import { buildGradient, GRADIENT_SIZE, MAX_COLORS, parseHex } from '../palette/palette';
+import { DEFAULT_ADJUSTMENTS, MODE_INDEX, type Adjustments, type FilterMode } from '../filter';
 import { flipRows } from '../capture/image';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
@@ -12,10 +13,22 @@ type Program = {
   texture: WebGLTexture;
   paletteTexture: WebGLTexture;
   aPosition: number;
-  uCoverScale: WebGLUniformLocation | null;
-  uMirror: WebGLUniformLocation | null;
-  uIntensity: WebGLUniformLocation | null;
+  uniforms: Record<(typeof UNIFORMS)[number], WebGLUniformLocation | null>;
 };
+
+const UNIFORMS = [
+  'uCoverScale',
+  'uMirror',
+  'uIntensity',
+  'uColors',
+  'uColorCount',
+  'uMode',
+  'uContrast',
+  'uSaturation',
+  'uVignette',
+  'uGrain',
+  'uSeed',
+] as const;
 
 // Um único triângulo maior que a tela: mais simples que dois e sem costura diagonal.
 const FULLSCREEN_TRIANGLE = new Float32Array([-1, -1, 3, -1, -1, 3]);
@@ -32,7 +45,14 @@ export class Renderer {
   /** 0 = imagem original, 1 = filtro completo. */
   intensity = 1;
 
+  /** Ajustes base e efeitos (contraste, saturação, vinheta, grão). */
+  adjustments: Adjustments = { ...DEFAULT_ADJUSTMENTS };
+
   private palette: Uint8Array = buildGradient(['#000000', '#ffffff']);
+  private colors = new Float32Array(MAX_COLORS * 3);
+  private colorCount = 2;
+  private mode: FilterMode = 'gradient';
+  private seed = 0;
   private res: Program | null = null;
   private running = false;
   private frameHandle = 0;
@@ -83,9 +103,15 @@ export class Renderer {
     this.onFrame = listener;
   }
 
-  /** Troca as cores do filtro. Vale a partir do próximo frame. */
-  setPalette(colors: string[]): void {
+  /** Troca as cores e o modo do filtro. Vale a partir do próximo frame. */
+  setPalette(colors: string[], mode: FilterMode = 'gradient'): void {
     this.palette = buildGradient(colors);
+    this.colors.fill(0);
+    colors.slice(0, MAX_COLORS).forEach((hex, i) => {
+      parseHex(hex).forEach((v, c) => (this.colors[i * 3 + c] = v / 255));
+    });
+    this.colorCount = Math.min(colors.length, MAX_COLORS);
+    this.mode = mode;
     this.uploadPalette();
     this.draw();
   }
@@ -116,7 +142,7 @@ export class Renderer {
    * Gera a foto: renderiza o frame atual com o filtro num framebuffer do
    * tamanho nativo do vídeo (quadro inteiro, sem o corte da tela) e lê os pixels.
    */
-  capture(): ImageData | null {
+  capture({ mirrored = this.mirrored }: { mirrored?: boolean } = {}): ImageData | null {
     const { gl, video, res } = this;
     if (!res || gl.isContextLost() || !this.hasFrame()) return null;
 
@@ -134,7 +160,7 @@ export class Renderer {
 
     try {
       if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) return null;
-      if (!this.render(width, height, [1, 1])) return null;
+      if (!this.render(width, height, [1, 1], mirrored)) return null;
       const pixels = new Uint8Array(width * height * 4);
       gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
       // O WebGL lê de baixo para cima; a imagem começa pela linha de cima.
@@ -151,17 +177,28 @@ export class Renderer {
     return video.readyState >= video.HAVE_CURRENT_DATA && video.videoWidth > 0;
   }
 
-  private render(width: number, height: number, [sx, sy]: [number, number]): boolean {
+  private render(width: number, height: number, [sx, sy]: [number, number], mirrored = this.mirrored): boolean {
     const { gl, video, res } = this;
     if (!res || gl.isContextLost() || !this.hasFrame()) return false;
 
     gl.bindTexture(gl.TEXTURE_2D, res.texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
 
+    const u = res.uniforms;
+    const { contrast, saturation, vignette, grain } = this.adjustments;
+    this.seed = (this.seed + 1) % 97;
     gl.viewport(0, 0, width, height);
-    gl.uniform2f(res.uCoverScale, sx, sy);
-    gl.uniform1f(res.uMirror, this.mirrored ? 1 : 0);
-    gl.uniform1f(res.uIntensity, this.intensity);
+    gl.uniform2f(u.uCoverScale, sx, sy);
+    gl.uniform1f(u.uMirror, mirrored ? 1 : 0);
+    gl.uniform1f(u.uIntensity, this.intensity);
+    gl.uniform3fv(u.uColors, this.colors);
+    gl.uniform1f(u.uColorCount, this.colorCount);
+    gl.uniform1f(u.uMode, MODE_INDEX[this.mode]);
+    gl.uniform1f(u.uContrast, contrast);
+    gl.uniform1f(u.uSaturation, saturation);
+    gl.uniform1f(u.uVignette, vignette);
+    gl.uniform1f(u.uGrain, grain);
+    gl.uniform1f(u.uSeed, this.seed * 13.37);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     return true;
   }
@@ -232,9 +269,7 @@ export class Renderer {
       texture,
       paletteTexture,
       aPosition,
-      uCoverScale: gl.getUniformLocation(program, 'uCoverScale'),
-      uMirror: gl.getUniformLocation(program, 'uMirror'),
-      uIntensity: gl.getUniformLocation(program, 'uIntensity'),
+      uniforms: Object.fromEntries(UNIFORMS.map((name) => [name, gl.getUniformLocation(program, name)])) as Program['uniforms'],
     };
     this.uploadPalette();
     return this.res;

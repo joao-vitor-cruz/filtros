@@ -2,11 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { normalizeName, parseStoredPalettes, serializePalettes, suggestName } from './storage';
 import type { Palette } from './palette';
 
-const custom = (id: string, name: string, colors: string[]): Palette => ({ id, name, colors, builtIn: false });
+const custom = (id: string, name: string, colors: string[], mode: Palette['mode'] = 'gradient'): Palette => ({
+  id,
+  name,
+  colors,
+  mode,
+  builtIn: false,
+});
 
 describe('parseStoredPalettes', () => {
   it('volta o que foi salvo', () => {
-    const palettes = [custom('a', 'Praia', ['#003049', '#fcbf49']), custom('b', 'Neon', ['#000', '#0f0', '#fff'])];
+    const palettes = [
+      custom('a', 'Praia', ['#003049', '#fcbf49'], 'splitTone'),
+      custom('b', 'Neon', ['#000', '#0f0', '#fff'], 'posterize'),
+    ];
     expect(parseStoredPalettes(serializePalettes(palettes))).toEqual(palettes);
   });
 
@@ -26,6 +35,14 @@ describe('parseStoredPalettes', () => {
       42,
     ]);
     expect(parseStoredPalettes(raw)).toEqual([custom('ok', 'Boa', ['#000000', '#ffffff'])]);
+  });
+
+  it('usa o mapa de cores em paletas salvas sem modo ou com modo desconhecido', () => {
+    const raw = JSON.stringify([
+      { id: 'antiga', name: 'A', colors: ['#000', '#fff'] },
+      { id: 'estranha', name: 'B', colors: ['#000', '#fff'], mode: 'holograma' },
+    ]);
+    expect(parseStoredPalettes(raw).map((p) => p.mode)).toEqual(['gradient', 'gradient']);
   });
 
   it('dá um nome padrão quando o salvo está vazio', () => {

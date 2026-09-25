@@ -1,3 +1,5 @@
+import type { FilterMode } from '../filter';
+
 export type RGB = [number, number, number];
 
 export type Palette = {
@@ -5,6 +7,8 @@ export type Palette = {
   name: string;
   /** 2 a 5 cores hex, da sombra para a luz. */
   colors: string[];
+  /** Como as cores são aplicadas (mapa de cores, tons divididos, tinta ou pôster). */
+  mode: FilterMode;
   builtIn: boolean;
 };
 

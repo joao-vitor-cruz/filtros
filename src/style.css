@@ -485,6 +485,11 @@ body {
   animation: sheet-in 220ms ease-out;
 }
 
+/* O painel rola; os itens mantêm a altura em vez de encolher. */
+.sheet-body > * {
+  flex-shrink: 0;
+}
+
 @keyframes sheet-in {
   from {
     transform: translateY(24px);
@@ -687,6 +692,229 @@ body {
   margin: 0;
 }
 
+/* O botão de trocar câmera fica sempre à direita, mesmo sozinho. */
+#switch-camera {
+  margin-left: auto;
+}
+
+/* ---------- Modo do filtro (editor) ---------- */
+
+fieldset.field {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+fieldset.field legend {
+  margin-bottom: 8px;
+  padding: 0;
+}
+
+.mode-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mode-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.06);
+  cursor: pointer;
+}
+
+.mode-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mode-option:has(input:checked) {
+  border-color: var(--fg);
+  background: rgb(255 255 255 / 0.12);
+}
+
+.mode-option:has(input:focus-visible) {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
+.mode-label {
+  color: var(--fg);
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.mode-description {
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+/* ---------- Painel de ajustes ---------- */
+
+.sheet-hint {
+  margin: -8px 0 0;
+  color: var(--fg-muted);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.ghost-btn.compact {
+  min-height: 40px;
+  border-style: solid;
+  font-size: 0.875rem;
+}
+
+.ghost-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.adjust-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.adjust-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: 12px;
+  font-size: 0.9375rem;
+}
+
+.adjust-row output {
+  min-width: 4ch;
+  text-align: right;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.adjust-row input {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 40px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  --from: 0%;
+  --to: 0%;
+}
+
+.adjust-row input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    rgb(255 255 255 / 0.25) var(--from),
+    var(--fg) var(--from),
+    var(--fg) var(--to),
+    rgb(255 255 255 / 0.25) var(--to)
+  );
+}
+
+.adjust-row input::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    rgb(255 255 255 / 0.25) var(--from),
+    var(--fg) var(--from),
+    var(--fg) var(--to),
+    rgb(255 255 255 / 0.25) var(--to)
+  );
+}
+
+.adjust-row input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -9px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--fg);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+}
+
+.adjust-row input::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--fg);
+}
+
+.adjust-row input:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: var(--touch);
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.switch-row small {
+  display: block;
+  margin-top: 2px;
+  color: var(--fg-muted);
+  font-size: 0.75rem;
+}
+
+.switch-row input {
+  flex: 0 0 auto;
+  position: relative;
+  width: 50px;
+  height: 30px;
+  margin: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.25);
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.switch-row input::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--fg);
+  transition: transform 150ms ease;
+}
+
+.switch-row input:checked {
+  background: var(--accent);
+}
+
+.switch-row input:checked::after {
+  transform: translateX(20px);
+}
+
+.switch-row input:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
 /* Tela larga (tablet/computador): controles numa coluna central. */
 @media (min-width: 640px) {
   .intensity {
@@ -698,7 +926,7 @@ body {
 
 .fps {
   position: absolute;
-  top: calc(12px + var(--safe-top));
+  top: calc(68px + var(--safe-top));
   left: calc(16px + var(--safe-left));
   padding: 4px 8px;
   border-radius: 6px;
@@ -727,7 +955,7 @@ body {
 
 .top-bar {
   top: 0;
-  justify-content: flex-end;
+  justify-content: space-between;
   padding-top: calc(12px + var(--safe-top));
 }
 
@@ -851,8 +1079,9 @@ body {
   }
 }
 
-/* Enquanto a paleta é editada, a folha ocupa a parte de baixo da tela. */
-.app[data-editing] .bottom-bar {
+/* Enquanto uma folha (editor ou ajustes) está aberta, ela ocupa a parte de baixo da tela. */
+.app[data-sheet] .bottom-bar,
+.app[data-sheet] .top-bar {
   visibility: hidden;
 }
 

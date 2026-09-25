@@ -4,14 +4,19 @@ import { Renderer } from './renderer/renderer';
 import { FpsMeter } from './fps';
 import {
   filterOptions,
+  loadAdjustments,
   loadIntensity,
+  loadMirrorPhotos,
   loadSelectedId,
+  saveAdjustments,
   saveIntensity,
+  saveMirrorPhotos,
   saveSelectedId,
   wrapIndex,
 } from './state';
 import { cssGradient, isValidPalette, type Palette } from './palette/palette';
 import { PRESETS } from './palette/presets';
+import type { FilterMode } from './filter';
 import {
   loadCustomPalettes,
   newPaletteId,
@@ -22,6 +27,7 @@ import {
 import { onHorizontalSwipe } from './ui/swipe';
 import { PalettePicker } from './ui/palette-picker';
 import { PaletteEditor, type PaletteDraft } from './ui/palette-editor';
+import { SettingsPanel } from './ui/settings';
 import { captureVideoFrame, encodeJpeg, photoFileName } from './capture/image';
 import { savePhoto } from './capture/save';
 
@@ -54,6 +60,8 @@ const reviewClose = $<HTMLButtonElement>('#review-close');
 const saveBtn = $<HTMLButtonElement>('#save');
 const notice = $<HTMLElement>('#notice');
 const editorRoot = $<HTMLElement>('#editor');
+const settingsRoot = $<HTMLElement>('#settings');
+const settingsBtn = $<HTMLButtonElement>('#open-settings');
 
 const camera = new Camera(video);
 let cameraCount = 0;
@@ -130,7 +138,7 @@ function showToast(index: number): void {
 function selectFilter(index: number, announce: boolean, smooth = true): void {
   selected = index;
   const option = options[index];
-  if (renderer && option.palette) renderer.setPalette(option.palette.colors);
+  if (renderer && option.palette) renderer.setPalette(option.palette.colors, option.palette.mode);
   applyToRenderer();
   picker.select(index, smooth);
   updateIntensityUi();
@@ -139,7 +147,7 @@ function selectFilter(index: number, announce: boolean, smooth = true): void {
 }
 
 function stepFilter(direction: 1 | -1): void {
-  if (app.dataset.state !== 'running' || photo || editor.isOpen) return;
+  if (app.dataset.state !== 'running' || photo || app.dataset.sheet) return;
   selectFilter(wrapIndex(selected, direction, options.length), true);
 }
 
@@ -185,23 +193,27 @@ const editor = new PaletteEditor(editorRoot, {
 });
 
 function openEditor(index: number | null): void {
-  if (photo) return;
+  if (photo || app.dataset.sheet) return;
   const palette = index === null ? null : options[index].palette;
   if (index !== null && (!palette || palette.builtIn)) return;
   editingId = palette?.id ?? null;
   // Uma paleta nova começa com as cores do filtro atual, para servir de ponto de partida.
   const base = palette ?? options[selected].palette;
   const draft: PaletteDraft = palette
-    ? { name: palette.name, colors: palette.colors }
-    : { name: suggestName(customPalettes), colors: base ? base.colors : ['#1d3557', '#e63946', '#f1faee'] };
-  app.dataset.editing = 'true';
+    ? { name: palette.name, colors: palette.colors, mode: palette.mode }
+    : {
+        name: suggestName(customPalettes),
+        colors: base ? base.colors : ['#1d3557', '#e63946', '#f1faee'],
+        mode: base?.mode ?? 'gradient',
+      };
+  app.dataset.sheet = 'editor';
   editor.open(draft, palette ? 'edit' : 'create');
-  previewPalette(draft.colors);
+  previewPalette(draft.colors, draft.mode);
 }
 
-function previewPalette(colors: string[]): void {
+function previewPalette(colors: string[], mode: FilterMode): void {
   if (!renderer || !isValidPalette(colors)) return;
-  renderer.setPalette(colors);
+  renderer.setPalette(colors, mode);
   // Mostra a paleta mesmo se o filtro atual for "Original" ou a intensidade estiver em zero.
   renderer.intensity = intensity > 0 ? intensity : 1;
   renderer.draw();
@@ -209,7 +221,7 @@ function previewPalette(colors: string[]): void {
 
 function closeEditor(): void {
   editor.close();
-  delete app.dataset.editing;
+  delete app.dataset.sheet;
   editingId = null;
   selectFilter(selected, false, false); // devolve a paleta escolhida ao preview
   picker.focusSelected();
@@ -234,6 +246,7 @@ function savePalette(draft: PaletteDraft): void {
     id: editingId ?? newPaletteId(),
     name: normalizeName(draft.name, suggestName(others)),
     colors: draft.colors,
+    mode: draft.mode,
     builtIn: false,
   };
   customPalettes = editingId
@@ -253,6 +266,40 @@ function deletePalette(): void {
   refreshOptions(null, index - 1); // fica no filtro vizinho
   closeEditor();
 }
+
+// ---------- Ajustes ----------
+
+let adjustments = loadAdjustments();
+let mirrorPhotos = loadMirrorPhotos();
+if (renderer) renderer.adjustments = adjustments;
+
+const settings = new SettingsPanel(settingsRoot, {
+  onAdjust: (value) => {
+    adjustments = value;
+    saveAdjustments(value);
+    if (renderer) {
+      renderer.adjustments = value;
+      renderer.draw();
+    }
+  },
+  onMirrorChange: (value) => {
+    mirrorPhotos = value;
+    saveMirrorPhotos(value);
+  },
+  onClose: () => {
+    settings.close();
+    delete app.dataset.sheet;
+    settingsBtn.focus();
+  },
+});
+
+settingsBtn.addEventListener('click', () => {
+  if (photo || app.dataset.sheet) return;
+  app.dataset.sheet = 'settings';
+  settings.open(adjustments, mirrorPhotos);
+});
+// Sem WebGL não há filtros para ajustar.
+settingsBtn.hidden = !renderer;
 
 // ---------- Foto ----------
 
@@ -277,7 +324,10 @@ async function takePhoto(): Promise<void> {
   if (app.dataset.state !== 'running' || photo) return;
   shutterBtn.disabled = true;
   try {
-    const image = renderer ? renderer.capture() : captureVideoFrame(video, video.classList.contains('mirrored'));
+    // A foto só sai espelhada se o preview estiver espelhado e o usuário quiser assim.
+    const image = renderer
+      ? renderer.capture({ mirrored: renderer.mirrored && mirrorPhotos })
+      : captureVideoFrame(video, video.classList.contains('mirrored') && mirrorPhotos);
     if (!image) throw new Error('Sem imagem da câmera');
     playFlash();
     const blob = await encodeJpeg(image);

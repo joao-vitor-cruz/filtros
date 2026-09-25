@@ -6,11 +6,13 @@ uniform vec2 uCoverScale;
 uniform float uMirror; // 1.0 = espelhado, 0.0 = normal
 
 varying vec2 vUv;
+varying vec2 vPos; // posição na imagem final, de -1 a 1 (usada pela vinheta)
 
 void main() {
   vec2 uv = aPosition * 0.5 * uCoverScale + 0.5;
   uv.x = mix(uv.x, 1.0 - uv.x, uMirror);
   uv.y = 1.0 - uv.y; // a primeira linha do vídeo é o topo da imagem
   vUv = uv;
+  vPos = aPosition;
   gl_Position = vec4(aPosition, 0.0, 1.0);
 }

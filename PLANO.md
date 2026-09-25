@@ -76,9 +76,9 @@ Todas as camadas ficam num único fragment shader, na ordem abaixo. Cada uma pod
 1. **Ajustes base**: contraste, saturação, exposição.
 2. **Mapeamento pela paleta** (núcleo do filtro), em um dos modos:
    - `gradient` — luminância → cor no gradiente da paleta (duotone/tritone).
-   - `splitTone` — cor A nas sombras, cor B nas luzes.
-   - `tint` — primeira cor da paleta aplicada com *soft light*.
-   - `posterize` — cada pixel vira a cor mais próxima da paleta.
+   - `splitTone` — a cor da paleta no brilho do pixel, aplicada com *soft light* (tinge sombras e luzes mantendo as cores da foto).
+   - `tint` — a cor do meio da paleta aplicada com *soft light* sobre a foto.
+   - `posterize` — o brilho é dividido em faixas iguais, uma por cor da paleta.
 3. **Efeitos**: vinheta e grão (opcionais).
 4. **Intensidade**: `mix(original, filtrado, intensidade)`.
 
@@ -91,18 +91,17 @@ type Palette = {
   id: string;
   name: string;
   colors: string[];          // 2 a 5 cores hex, da sombra para a luz
+  mode: 'gradient' | 'splitTone' | 'tint' | 'posterize';
   builtIn: boolean;
 };
 
-type FilterState = {
-  paletteId: string;
-  mode: 'gradient' | 'splitTone' | 'tint' | 'posterize';
-  intensity: number;         // 0..1
+type Adjustments = {         // globais, salvos no navegador
   contrast: number;          // -1..1
   saturation: number;        // -1..1
   vignette: number;          // 0..1
   grain: number;             // 0..1
 };
+// Também salvos: filtro escolhido, intensidade (0..1) e espelhar fotos.
 ```
 
 ## 5. Telas e UX (mobile-first)
@@ -124,7 +123,8 @@ type FilterState = {
 
 - **Carrossel de paletas**: cada item mostra o gradiente da paleta. Tocar aplica na hora. Nas paletas do usuário, tocar de novo (ou pressionar e segurar) abre o editor.
 - **Editor de paleta** (painel inferior): 2 a 5 cores com `<input type="color">`, reordenar, remover, pré-visualização ao vivo e salvar.
-- **Painel de ajustes** (⚙): modo do filtro, contraste, saturação, vinheta, grão.
+- **Modo do filtro**: faz parte da paleta. As prontas têm o seu; nas do usuário, é escolhido no editor.
+- **Painel de ajustes** (⚙): contraste, saturação, vinheta, grão (valem para todas as paletas) e a opção de espelhar fotos da câmera frontal.
 - **Disparo**: flash branco rápido + vibração (`navigator.vibrate`) e a foto aparece em tela cheia.
 - **Tela da foto**: só o botão *Salvar*; o X no canto volta para a câmera sem salvar.
 - Alvos de toque ≥ 44px, controles na metade inferior (alcance do polegar), respeita `safe-area-inset` (notch).
@@ -133,7 +133,7 @@ type FilterState = {
 
 1. Ao disparar, o renderer desenha o frame atual num **framebuffer do tamanho nativo do vídeo** (a câmera é pedida em 1920×1080), com o quadro inteiro da câmera, e não o recorte da tela.
 2. `readPixels` → linhas invertidas (o WebGL lê de baixo para cima) → canvas 2D → `toBlob('image/jpeg', 0.92)`.
-3. Câmera frontal: a foto sai espelhada, como o usuário viu no preview.
+3. Câmera frontal: a foto sai espelhada, como o usuário viu no preview; dá para desligar no painel de ajustes.
 4. **Tela da foto**: a única ação é **Salvar**. Um X discreto no canto volta para a câmera descartando a foto. Não há compartilhar, excluir nem galeria.
 5. Salvar: no iPhone/iPad abre a folha do sistema (onde "Salvar imagem" leva a foto para o app Fotos, único caminho no Safari); nos demais, faz o download do JPEG. Depois de salvar, volta para a câmera com o aviso "Foto salva".
 ## 7. Paletas prontas (sugestão inicial)
@@ -145,7 +145,8 @@ type FilterState = {
 | Sépia | `#2e1f0f` `#a67b4b` `#f5e6c8` | gradient |
 | Teal & Orange | `#006d77` `#ffb703` | splitTone |
 | Noir | `#000000` `#ffffff` | gradient |
-| Pop Art | `#ff006e` `#fb5607` `#ffbe0b` `#3a86ff` | posterize |
+| Pop Art | `#3a86ff` `#ff006e` `#fb5607` `#ffbe0b` | posterize |
+| Rosé | `#5c2a3d` `#ff8fab` `#ffe5ec` | tint |
 
 ## 8. Fases de desenvolvimento
 
