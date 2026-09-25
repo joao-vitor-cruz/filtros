@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildGradient, cssGradient, isValidPalette, parseHex } from './palette';
+import { buildGradient, cssGradient, isValidPalette, mixHex, normalizeHex, parseHex } from './palette';
 import { PRESETS } from './presets';
 
 const pixel = (data: Uint8Array, i: number) => Array.from(data.slice(i * 4, i * 4 + 4));
@@ -64,5 +64,18 @@ describe('PRESETS', () => {
   it('têm ids únicos e paletas válidas', () => {
     expect(new Set(PRESETS.map((p) => p.id)).size).toBe(PRESETS.length);
     for (const p of PRESETS) expect(isValidPalette(p.colors), p.name).toBe(true);
+  });
+});
+
+describe('normalizeHex e mixHex', () => {
+  it('normaliza para #rrggbb minúsculo', () => {
+    expect(normalizeHex('#FA0')).toBe('#ffaa00');
+    expect(normalizeHex('0077B6')).toBe('#0077b6');
+  });
+
+  it('mistura duas cores', () => {
+    expect(mixHex('#000000', '#ffffff')).toBe('#808080');
+    expect(mixHex('#ff0000', '#0000ff', 0)).toBe('#ff0000');
+    expect(mixHex('#ff0000', '#0000ff', 1)).toBe('#0000ff');
   });
 });

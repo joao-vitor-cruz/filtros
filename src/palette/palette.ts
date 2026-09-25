@@ -63,3 +63,19 @@ export function buildGradient(colors: string[], size = GRADIENT_SIZE): Uint8Arra
 export function cssGradient(colors: string[], direction = 'to right'): string {
   return `linear-gradient(${direction}, ${colors.join(', ')})`;
 }
+
+export function toHex([r, g, b]: RGB): string {
+  return '#' + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
+}
+
+/** Normaliza para "#rrggbb" minúsculo (formato exigido pelo <input type="color">). */
+export function normalizeHex(hex: string): string {
+  return toHex(parseHex(hex));
+}
+
+/** Cor no meio do caminho entre duas cores. */
+export function mixHex(a: string, b: string, t = 0.5): string {
+  const ca = parseHex(a);
+  const cb = parseHex(b);
+  return toHex([0, 1, 2].map((i) => ca[i] + (cb[i] - ca[i]) * t) as RGB);
+}

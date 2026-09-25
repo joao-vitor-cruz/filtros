@@ -97,7 +97,8 @@ body {
   z-index: 3;
 }
 
-.review {
+.review,
+.sheet {
   z-index: 4;
 }
 
@@ -433,6 +434,259 @@ body {
   transform: translate(-50%, 0);
 }
 
+/* ---------- Botão "Nova" e paletas personalizadas ---------- */
+
+.palette-add .palette-swatch {
+  display: grid;
+  place-items: center;
+  border-style: dashed;
+  background: var(--glass);
+}
+
+.palette-add svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* ---------- Editor de paleta (folha inferior) ---------- */
+
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  max-height: 75dvh;
+  /* A parte de cima da tela continua mostrando a câmera com a paleta sendo editada. */
+  pointer-events: none;
+}
+
+.sheet-body {
+  width: 100%;
+  max-width: 520px;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px calc(16px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(16px + var(--safe-left));
+  border-radius: 20px 20px 0 0;
+  background: rgb(22 22 24 / 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 -8px 32px rgb(0 0 0 / 0.4);
+  pointer-events: auto;
+  animation: sheet-in 220ms ease-out;
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sheet-header h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.sheet-header h2:focus {
+  outline: none;
+}
+
+.icon-btn.small {
+  width: 40px;
+  height: 40px;
+}
+
+.icon-btn.small svg {
+  width: 22px;
+  height: 22px;
+}
+
+.editor-gradient {
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgb(255 255 255 / 0.15);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+}
+
+.field small {
+  font-size: inherit;
+  opacity: 0.7;
+}
+
+.field input[type='text'] {
+  min-height: var(--touch);
+  padding: 0 14px;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.06);
+  color: var(--fg);
+  /* 16px evita o zoom automático do iOS ao focar o campo. */
+  font: inherit;
+  font-size: 1rem;
+}
+
+.field input[type='text']:focus {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
+}
+
+.color-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.color-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 4px 4px 4px 6px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.06);
+}
+
+.color-swatch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgb(255 255 255 / 0.6);
+  cursor: pointer;
+}
+
+/* O seletor nativo fica invisível por cima do círculo: tocar no círculo abre o seletor do sistema. */
+.color-swatch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.color-swatch:has(input:focus-visible) {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
+.color-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.color-hex {
+  color: var(--fg);
+  font: 600 0.9375rem ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-transform: uppercase;
+}
+
+.color-role {
+  font-size: 0.75rem;
+}
+
+.color-actions {
+  display: flex;
+}
+
+.mini-btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.mini-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mini-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.mini-btn:not(:disabled):active {
+  background: rgb(255 255 255 / 0.1);
+}
+
+.mini-btn:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: -2px;
+}
+
+.ghost-btn {
+  min-height: var(--touch);
+  padding: 0 16px;
+  border: 1px dashed rgb(255 255 255 / 0.35);
+  border-radius: 12px;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.ghost-btn.danger {
+  border-style: solid;
+  border-color: rgb(255 99 99 / 0.5);
+  color: #ff8a8a;
+}
+
+.ghost-btn:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
+.sheet-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.sheet-actions .primary-btn {
+  flex: 1;
+  margin: 0;
+}
+
 /* Tela larga (tablet/computador): controles numa coluna central. */
 @media (min-width: 640px) {
   .intensity {
@@ -591,9 +845,15 @@ body {
   .notice {
     transition: none;
   }
-  .flash.active {
+  .flash.active,
+  .sheet-body {
     animation: none;
   }
+}
+
+/* Enquanto a paleta é editada, a folha ocupa a parte de baixo da tela. */
+.app[data-editing] .bottom-bar {
+  visibility: hidden;
 }
 
 /* Sem ações disponíveis em estado de erro. */

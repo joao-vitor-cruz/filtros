@@ -10,9 +10,18 @@ import {
   saveSelectedId,
   wrapIndex,
 } from './state';
-import { cssGradient } from './palette/palette';
+import { cssGradient, isValidPalette, type Palette } from './palette/palette';
+import { PRESETS } from './palette/presets';
+import {
+  loadCustomPalettes,
+  newPaletteId,
+  normalizeName,
+  saveCustomPalettes,
+  suggestName,
+} from './palette/storage';
 import { onHorizontalSwipe } from './ui/swipe';
 import { PalettePicker } from './ui/palette-picker';
+import { PaletteEditor, type PaletteDraft } from './ui/palette-editor';
 import { captureVideoFrame, encodeJpeg, photoFileName } from './capture/image';
 import { savePhoto } from './capture/save';
 
@@ -44,6 +53,7 @@ const reviewImage = $<HTMLImageElement>('#review-image');
 const reviewClose = $<HTMLButtonElement>('#review-close');
 const saveBtn = $<HTMLButtonElement>('#save');
 const notice = $<HTMLElement>('#notice');
+const editorRoot = $<HTMLElement>('#editor');
 
 const camera = new Camera(video);
 let cameraCount = 0;
@@ -72,14 +82,20 @@ if (renderer && new URLSearchParams(location.search).has('debug')) {
   });
 }
 
-// Filtros: "Original" + paletas prontas. Começa no último usado ou na primeira paleta.
-const options = filterOptions();
+// Filtros: "Original" + paletas prontas + paletas do usuário.
+// Começa no último usado ou na primeira paleta pronta.
+let customPalettes = loadCustomPalettes();
+let options = filterOptions([...PRESETS, ...customPalettes]);
 let selected = options.findIndex((o) => o.id === loadSelectedId());
 if (selected < 0) selected = 1;
 let intensity = loadIntensity();
 let toastTimer = 0;
 
-const picker = new PalettePicker(pickerRoot, options, (index) => selectFilter(index, false));
+const picker = new PalettePicker(pickerRoot, options, {
+  onSelect: (index) => selectFilter(index, false),
+  onEdit: (index) => openEditor(index),
+  onCreate: () => openEditor(null),
+});
 
 function applyToRenderer(): void {
   if (!renderer) return;
@@ -123,7 +139,7 @@ function selectFilter(index: number, announce: boolean, smooth = true): void {
 }
 
 function stepFilter(direction: 1 | -1): void {
-  if (app.dataset.state !== 'running' || photo) return;
+  if (app.dataset.state !== 'running' || photo || editor.isOpen) return;
   selectFilter(wrapIndex(selected, direction, options.length), true);
 }
 
@@ -154,6 +170,88 @@ if (renderer) {
   // Sem WebGL não há filtros: esconde os controles que não teriam efeito.
   pickerRoot.hidden = true;
   intensityRow.hidden = true;
+}
+
+// ---------- Editor de paletas ----------
+
+/** Paleta sendo editada; null ao criar uma nova. */
+let editingId: string | null = null;
+
+const editor = new PaletteEditor(editorRoot, {
+  onPreview: previewPalette,
+  onSave: savePalette,
+  onDelete: deletePalette,
+  onCancel: closeEditor,
+});
+
+function openEditor(index: number | null): void {
+  if (photo) return;
+  const palette = index === null ? null : options[index].palette;
+  if (index !== null && (!palette || palette.builtIn)) return;
+  editingId = palette?.id ?? null;
+  // Uma paleta nova começa com as cores do filtro atual, para servir de ponto de partida.
+  const base = palette ?? options[selected].palette;
+  const draft: PaletteDraft = palette
+    ? { name: palette.name, colors: palette.colors }
+    : { name: suggestName(customPalettes), colors: base ? base.colors : ['#1d3557', '#e63946', '#f1faee'] };
+  app.dataset.editing = 'true';
+  editor.open(draft, palette ? 'edit' : 'create');
+  previewPalette(draft.colors);
+}
+
+function previewPalette(colors: string[]): void {
+  if (!renderer || !isValidPalette(colors)) return;
+  renderer.setPalette(colors);
+  // Mostra a paleta mesmo se o filtro atual for "Original" ou a intensidade estiver em zero.
+  renderer.intensity = intensity > 0 ? intensity : 1;
+  renderer.draw();
+}
+
+function closeEditor(): void {
+  editor.close();
+  delete app.dataset.editing;
+  editingId = null;
+  selectFilter(selected, false, false); // devolve a paleta escolhida ao preview
+  picker.focusSelected();
+}
+
+/** Recria a lista de filtros e seleciona o de `id` (ou o índice `fallback`). */
+function refreshOptions(id: string | null, fallback: number): void {
+  options = filterOptions([...PRESETS, ...customPalettes]);
+  picker.setOptions(options);
+  const index = options.findIndex((o) => o.id === id);
+  selected = index >= 0 ? index : Math.min(Math.max(fallback, 0), options.length - 1);
+}
+
+function persist(message: string): void {
+  showNotice(saveCustomPalettes(customPalettes) ? message : 'Paleta criada, mas este navegador não permitiu guardá-la');
+}
+
+function savePalette(draft: PaletteDraft): void {
+  if (!isValidPalette(draft.colors)) return;
+  const others = customPalettes.filter((p) => p.id !== editingId);
+  const palette: Palette = {
+    id: editingId ?? newPaletteId(),
+    name: normalizeName(draft.name, suggestName(others)),
+    colors: draft.colors,
+    builtIn: false,
+  };
+  customPalettes = editingId
+    ? customPalettes.map((p) => (p.id === editingId ? palette : p))
+    : [...customPalettes, palette];
+  persist('Paleta salva');
+  refreshOptions(palette.id, selected);
+  closeEditor();
+}
+
+function deletePalette(): void {
+  const palette = customPalettes.find((p) => p.id === editingId);
+  if (!palette || !confirm(`Excluir a paleta "${palette.name}"?`)) return;
+  const index = options.findIndex((o) => o.id === palette.id);
+  customPalettes = customPalettes.filter((p) => p.id !== palette.id);
+  persist('Paleta excluída');
+  refreshOptions(null, index - 1); // fica no filtro vizinho
+  closeEditor();
 }
 
 // ---------- Foto ----------

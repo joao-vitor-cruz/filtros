@@ -70,6 +70,35 @@
         </footer>
       </section>
 
+      <section class="sheet" id="editor" role="dialog" aria-modal="true" aria-labelledby="editor-title" hidden>
+        <form class="sheet-body" novalidate>
+          <header class="sheet-header">
+            <h2 id="editor-title" tabindex="-1">Nova paleta</h2>
+            <button class="icon-btn small" id="editor-cancel" type="button" aria-label="Cancelar">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            </button>
+          </header>
+
+          <div class="editor-gradient" id="editor-gradient" aria-hidden="true"></div>
+
+          <label class="field">
+            <span>Nome</span>
+            <input id="editor-name" type="text" autocomplete="off" enterkeyhint="done" placeholder="Minha paleta" />
+          </label>
+
+          <div class="field">
+            <span id="editor-colors-label">Cores <small>(da sombra para a luz)</small></span>
+            <ol class="color-list" id="editor-colors" aria-labelledby="editor-colors-label"></ol>
+            <button class="ghost-btn" id="editor-add" type="button">+ Adicionar cor</button>
+          </div>
+
+          <footer class="sheet-actions">
+            <button class="ghost-btn danger" id="editor-delete" type="button">Excluir</button>
+            <button class="primary-btn" id="editor-save" type="submit">Salvar paleta</button>
+          </footer>
+        </form>
+      </section>
+
       <p class="notice" id="notice" role="status"></p>
     </main>
     <script type="module" src="/src/main.ts"></script>

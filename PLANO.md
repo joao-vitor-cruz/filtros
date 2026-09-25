@@ -122,7 +122,7 @@ type FilterState = {
 └──────────────────────────┘
 ```
 
-- **Carrossel de paletas**: cada item mostra o gradiente da paleta. Tocar aplica na hora. Pressionar e segurar edita.
+- **Carrossel de paletas**: cada item mostra o gradiente da paleta. Tocar aplica na hora. Nas paletas do usuário, tocar de novo (ou pressionar e segurar) abre o editor.
 - **Editor de paleta** (painel inferior): 2 a 5 cores com `<input type="color">`, reordenar, remover, pré-visualização ao vivo e salvar.
 - **Painel de ajustes** (⚙): modo do filtro, contraste, saturação, vinheta, grão.
 - **Disparo**: flash branco rápido + vibração (`navigator.vibrate`) e a foto aparece em tela cheia.
