@@ -13,6 +13,8 @@ import {
 import { cssGradient } from './palette/palette';
 import { onHorizontalSwipe } from './ui/swipe';
 import { PalettePicker } from './ui/palette-picker';
+import { captureVideoFrame, encodeJpeg, photoFileName } from './capture/image';
+import { savePhoto } from './capture/save';
 
 type AppState = 'loading' | 'running' | 'error';
 
@@ -35,6 +37,13 @@ const pickerRoot = $<HTMLElement>('#palette-picker');
 const intensityRow = $<HTMLElement>('#intensity-row');
 const intensityInput = $<HTMLInputElement>('#intensity');
 const intensityValue = $<HTMLOutputElement>('#intensity-value');
+const shutterBtn = $<HTMLButtonElement>('#shutter');
+const flash = $<HTMLElement>('#flash');
+const review = $<HTMLElement>('#review');
+const reviewImage = $<HTMLImageElement>('#review-image');
+const reviewClose = $<HTMLButtonElement>('#review-close');
+const saveBtn = $<HTMLButtonElement>('#save');
+const notice = $<HTMLElement>('#notice');
 
 const camera = new Camera(video);
 let cameraCount = 0;
@@ -114,7 +123,7 @@ function selectFilter(index: number, announce: boolean, smooth = true): void {
 }
 
 function stepFilter(direction: 1 | -1): void {
-  if (app.dataset.state !== 'running') return;
+  if (app.dataset.state !== 'running' || photo) return;
   selectFilter(wrapIndex(selected, direction, options.length), true);
 }
 
@@ -147,8 +156,83 @@ if (renderer) {
   intensityRow.hidden = true;
 }
 
+// ---------- Foto ----------
+
+let photo: { blob: Blob; url: string; name: string } | null = null;
+let noticeTimer = 0;
+
+function showNotice(text: string): void {
+  notice.textContent = text;
+  notice.classList.add('visible');
+  clearTimeout(noticeTimer);
+  noticeTimer = window.setTimeout(() => notice.classList.remove('visible'), 2000);
+}
+
+function playFlash(): void {
+  flash.classList.remove('active');
+  void flash.offsetWidth; // reinicia a animação
+  flash.classList.add('active');
+  navigator.vibrate?.(30); // não existe no iOS; ignorado lá
+}
+
+async function takePhoto(): Promise<void> {
+  if (app.dataset.state !== 'running' || photo) return;
+  shutterBtn.disabled = true;
+  try {
+    const image = renderer ? renderer.capture() : captureVideoFrame(video, video.classList.contains('mirrored'));
+    if (!image) throw new Error('Sem imagem da câmera');
+    playFlash();
+    const blob = await encodeJpeg(image);
+    photo = { blob, url: URL.createObjectURL(blob), name: photoFileName() };
+    reviewImage.src = photo.url;
+    review.hidden = false;
+    renderer?.stop(); // a câmera fica ligada, mas a GPU descansa enquanto a foto é revisada
+    saveBtn.focus();
+  } catch (err) {
+    console.error(err);
+    showNotice('Não foi possível tirar a foto');
+  } finally {
+    shutterBtn.disabled = app.dataset.state !== 'running';
+  }
+}
+
+function closeReview(): void {
+  if (!photo) return;
+  URL.revokeObjectURL(photo.url);
+  photo = null;
+  review.hidden = true;
+  reviewImage.removeAttribute('src');
+  if (app.dataset.state === 'running') renderer?.start();
+  shutterBtn.focus();
+}
+
+async function saveCurrentPhoto(): Promise<void> {
+  if (!photo) return;
+  saveBtn.disabled = true;
+  try {
+    const result = await savePhoto(photo.blob, photo.name);
+    if (result === 'saved') {
+      closeReview();
+      showNotice('Foto salva');
+    }
+  } catch (err) {
+    console.error(err);
+    showNotice('Não foi possível salvar');
+  } finally {
+    saveBtn.disabled = false;
+  }
+}
+
+shutterBtn.addEventListener('click', takePhoto);
+saveBtn.addEventListener('click', saveCurrentPhoto);
+reviewClose.addEventListener('click', closeReview);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeReview();
+});
+
 function setState(state: AppState): void {
   app.dataset.state = state;
+  shutterBtn.disabled = state !== 'running';
   loading.hidden = state !== 'loading';
   errorBox.hidden = state !== 'error';
 }
@@ -184,7 +268,7 @@ async function startCamera(facing = camera.facing): Promise<void> {
     cameraCount = await countVideoInputs();
     switchBtn.hidden = cameraCount < 2;
     updateMirror();
-    renderer?.start();
+    if (!photo) renderer?.start();
     setState('running');
   } catch (err) {
     showError(err);

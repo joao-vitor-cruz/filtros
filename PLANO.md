@@ -18,8 +18,8 @@ Aplicação web, pensada primeiro para celular, que:
 | Câmera | `navigator.mediaDevices.getUserMedia` | API padrão, funciona em Chrome/Android e Safari/iOS |
 | Processamento | **WebGL 2** (fallback WebGL 1) com um único fragment shader | Processa cada frame na GPU em ~1–3 ms |
 | Foto | Render em framebuffer na resolução nativa → `canvas.toBlob()` | Foto em resolução maior que a da tela |
-| Salvar | **Web Share API** (`navigator.share({ files })`) + fallback de download | No iOS, compartilhar é a forma de salvar na galeria |
-| Persistência | `localStorage` (paletas) + IndexedDB (fotos recentes) | Sem backend |
+| Salvar | Download do JPEG; no iOS, folha do sistema (`navigator.share`) | No iOS é a única forma de salvar no app Fotos |
+| Persistência | `localStorage` (paletas e preferências) | Sem backend; as fotos vão direto para o aparelho |
 | Instalação | **PWA** (manifest + service worker) | Abre em tela cheia como um app |
 | Testes | Vitest (lógica de paletas/cores) + teste manual em aparelhos reais | Câmera/GPU não são bem simuladas |
 
@@ -58,9 +58,8 @@ src/
     presets.ts         # paletas prontas
     storage.ts         # salvar/carregar paletas do usuário
   capture/
-    capture.ts         # tirar foto → Blob
-    share.ts           # Web Share API + fallback de download
-    gallery.ts         # fotos recentes (IndexedDB)
+    image.ts           # pixels → JPEG, nome do arquivo
+    save.ts            # salvar (download; folha do sistema no iOS)
   ui/
     controls.ts        # botão de disparo, troca de câmera, slider de intensidade
     palette-picker.ts  # carrossel de paletas
@@ -119,25 +118,24 @@ type FilterState = {
 │                          │
 │ ─────●────── intensidade │
 │ (○)(○)(●)(○)(○)(+)       │  ← carrossel de paletas; "+" cria nova
-│ [🖼]      ( ◉ )          │  ← última foto, botão de disparo
+│          ( ◉ )           │  ← botão de disparo
 └──────────────────────────┘
 ```
 
 - **Carrossel de paletas**: cada item mostra o gradiente da paleta. Tocar aplica na hora. Pressionar e segurar edita.
 - **Editor de paleta** (painel inferior): 2 a 5 cores com `<input type="color">`, reordenar, remover, pré-visualização ao vivo e salvar.
 - **Painel de ajustes** (⚙): modo do filtro, contraste, saturação, vinheta, grão.
-- **Disparo**: flash branco rápido + vibração (`navigator.vibrate`), miniatura aparece no canto.
-- **Visualizar foto**: tocar na miniatura abre a foto com os botões *Compartilhar/Salvar* e *Excluir*.
+- **Disparo**: flash branco rápido + vibração (`navigator.vibrate`) e a foto aparece em tela cheia.
+- **Tela da foto**: só o botão *Salvar*; o X no canto volta para a câmera sem salvar.
 - Alvos de toque ≥ 44px, controles na metade inferior (alcance do polegar), respeita `safe-area-inset` (notch).
 
 ## 6. Captura de foto (detalhes)
 
-1. Ao disparar, o renderer desenha o frame atual num **framebuffer do tamanho nativo do vídeo** (ex.: 1920×1080), e não no tamanho da tela.
-2. `readPixels` → canvas 2D → `toBlob('image/jpeg', 0.92)`.
-3. Câmera frontal: o preview é espelhado. A foto sai espelhada por padrão (como o usuário viu), com uma opção nos ajustes para desativar.
-4. Salvar: se `navigator.canShare({ files })`, abre a folha de compartilhamento nativa (no iOS, "Salvar imagem" vai para a galeria). Se não, faz download com `<a download>`.
-5. As últimas ~20 fotos ficam no IndexedDB para a miniatura e a visualização.
-
+1. Ao disparar, o renderer desenha o frame atual num **framebuffer do tamanho nativo do vídeo** (a câmera é pedida em 1920×1080), com o quadro inteiro da câmera, e não o recorte da tela.
+2. `readPixels` → linhas invertidas (o WebGL lê de baixo para cima) → canvas 2D → `toBlob('image/jpeg', 0.92)`.
+3. Câmera frontal: a foto sai espelhada, como o usuário viu no preview.
+4. **Tela da foto**: a única ação é **Salvar**. Um X discreto no canto volta para a câmera descartando a foto. Não há compartilhar, excluir nem galeria.
+5. Salvar: no iPhone/iPad abre a folha do sistema (onde "Salvar imagem" leva a foto para o app Fotos, único caminho no Safari); nos demais, faz o download do JPEG. Depois de salvar, volta para a câmera com o aviso "Foto salva".
 ## 7. Paletas prontas (sugestão inicial)
 
 | Nome | Cores | Modo |
@@ -157,7 +155,7 @@ type FilterState = {
 | **2. Renderer** | WebGL desenhando o vídeo no canvas (passthrough), redimensionamento e orientação | Preview a 30+ fps sem distorção |
 | **3. Filtro gradient** | Shader com gradient map + intensidade, textura de paleta, presets | Trocar de paleta muda o preview na hora |
 | **4. UI principal** | Carrossel de paletas, slider de intensidade, layout mobile | Usável com uma mão |
-| **5. Foto** | Captura em resolução nativa, compartilhar/baixar, miniatura e visualização | Foto salva na galeria do iOS e do Android |
+| **5. Foto** | Captura em resolução nativa, tela da foto com só "Salvar" (e X para descartar) | Foto salva na galeria do iOS e do Android |
 | **6. Editor de paleta** | Criar/editar/excluir paletas, persistência | Paleta criada continua lá após recarregar |
 | **7. Mais camadas** | Modos splitTone/tint/posterize, contraste, saturação, vinheta, grão | Todos os modos funcionam com paletas personalizadas |
 | **8. PWA e polimento** | Manifest, service worker, ícones, testes em aparelhos, ajustes de desempenho | Instalável; Lighthouse PWA ok |

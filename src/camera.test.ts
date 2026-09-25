@@ -13,7 +13,7 @@ describe('buildConstraints', () => {
   it('usa "ideal" para não falhar em aparelhos com uma só câmera', () => {
     const video = buildConstraints('environment').video as MediaTrackConstraints;
     expect(video.facingMode).toEqual({ ideal: 'environment' });
-    expect(video.width).toEqual({ ideal: 1280 });
+    expect(video.width).toEqual({ ideal: 1920 });
   });
 });
 

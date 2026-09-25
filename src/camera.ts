@@ -17,17 +17,21 @@ export class CameraError extends Error {
   }
 }
 
-/** Resolução do preview. A foto em alta resolução é tratada na fase 5. */
-const PREVIEW_WIDTH = 1280;
-const PREVIEW_HEIGHT = 720;
+/**
+ * Resolução pedida à câmera. A foto sai nessa resolução (o preview é
+ * redimensionado para a tela pela GPU). "ideal" deixa o navegador usar
+ * a mais próxima que a câmera suportar.
+ */
+const VIDEO_WIDTH = 1920;
+const VIDEO_HEIGHT = 1080;
 
 export function buildConstraints(facing: Facing): MediaStreamConstraints {
   return {
     audio: false,
     video: {
       facingMode: { ideal: facing },
-      width: { ideal: PREVIEW_WIDTH },
-      height: { ideal: PREVIEW_HEIGHT },
+      width: { ideal: VIDEO_WIDTH },
+      height: { ideal: VIDEO_HEIGHT },
     },
   };
 }

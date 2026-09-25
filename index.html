@@ -51,8 +51,26 @@
           <output id="intensity-value" for="intensity">100%</output>
         </label>
         <div class="palette-picker" id="palette-picker"></div>
-        <!-- Botão de disparo chega na fase 5. -->
+        <div class="shutter-row">
+          <button class="shutter" id="shutter" type="button" aria-label="Tirar foto" disabled></button>
+        </div>
       </footer>
+
+      <div class="flash" id="flash" aria-hidden="true"></div>
+
+      <section class="review" id="review" aria-label="Foto tirada" hidden>
+        <img class="review-image" id="review-image" alt="Foto tirada com o filtro" />
+        <header class="top-bar review-top">
+          <button class="icon-btn" id="review-close" type="button" aria-label="Voltar para a câmera sem salvar">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </header>
+        <footer class="review-actions">
+          <button class="primary-btn save-btn" id="save" type="button">Salvar</button>
+        </footer>
+      </section>
+
+      <p class="notice" id="notice" role="status"></p>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

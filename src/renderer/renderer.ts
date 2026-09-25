@@ -2,6 +2,7 @@ import vertexSource from './quad.vert.glsl?raw';
 import fragmentSource from './filter.frag.glsl?raw';
 import { canvasSize, coverScale } from './cover';
 import { buildGradient, GRADIENT_SIZE } from '../palette/palette';
+import { flipRows } from '../capture/image';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -107,15 +108,57 @@ export class Renderer {
 
   /** Desenha o frame atual do vídeo. Retorna false se ainda não há imagem. */
   draw(): boolean {
+    const { width, height } = this.canvas;
+    return this.render(width, height, coverScale(this.video.videoWidth, this.video.videoHeight, width, height));
+  }
+
+  /**
+   * Gera a foto: renderiza o frame atual com o filtro num framebuffer do
+   * tamanho nativo do vídeo (quadro inteiro, sem o corte da tela) e lê os pixels.
+   */
+  capture(): ImageData | null {
     const { gl, video, res } = this;
-    if (!res || gl.isContextLost()) return false;
-    if (video.readyState < video.HAVE_CURRENT_DATA || video.videoWidth === 0) return false;
+    if (!res || gl.isContextLost() || !this.hasFrame()) return null;
+
+    const limit = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE), gl.getParameter(gl.MAX_RENDERBUFFER_SIZE));
+    const scale = Math.min(1, limit / Math.max(video.videoWidth, video.videoHeight));
+    const width = Math.floor(video.videoWidth * scale);
+    const height = Math.floor(video.videoHeight * scale);
+
+    const target = createTexture(gl, 2);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.activeTexture(gl.TEXTURE0);
+    const framebuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, target, 0);
+
+    try {
+      if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) return null;
+      if (!this.render(width, height, [1, 1])) return null;
+      const pixels = new Uint8Array(width * height * 4);
+      gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+      // O WebGL lê de baixo para cima; a imagem começa pela linha de cima.
+      return new ImageData(flipRows(pixels, width, height), width, height);
+    } finally {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.deleteFramebuffer(framebuffer);
+      gl.deleteTexture(target);
+    }
+  }
+
+  private hasFrame(): boolean {
+    const { video } = this;
+    return video.readyState >= video.HAVE_CURRENT_DATA && video.videoWidth > 0;
+  }
+
+  private render(width: number, height: number, [sx, sy]: [number, number]): boolean {
+    const { gl, video, res } = this;
+    if (!res || gl.isContextLost() || !this.hasFrame()) return false;
 
     gl.bindTexture(gl.TEXTURE_2D, res.texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
 
-    const [sx, sy] = coverScale(video.videoWidth, video.videoHeight, this.canvas.width, this.canvas.height);
-    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    gl.viewport(0, 0, width, height);
     gl.uniform2f(res.uCoverScale, sx, sy);
     gl.uniform1f(res.uMirror, this.mirrored ? 1 : 0);
     gl.uniform1f(res.uIntensity, this.intensity);
