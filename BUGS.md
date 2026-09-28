@@ -34,6 +34,26 @@ Todos os testes foram no Chromium com câmera falsa e GPU emulada. Falta confirm
 - salvar a foto no iPhone (folha do sistema → "Salvar imagem") e no Android (download);
 - escolher foto da galeria (iPhone e Android, incluindo fotos HEIC e fotos tiradas em pé).
 
+## Funcionalidades pedidas
+
+Ainda não iniciadas. Nenhuma precisa de servidor ou banco de dados online; algumas precisam guardar arquivos no próprio aparelho (IndexedDB, o banco de dados local do navegador) — ver a coluna "Armazenamento" e a seção abaixo.
+
+| # | Pedido | O que envolve | Armazenamento |
+|---|--------|---------------|---------------|
+| 1 | **Vídeo com o filtro** | Gravar o canvas filtrado (`canvas.captureStream()` + `MediaRecorder`) junto com o áudio do microfone; botão de gravar ao lado do disparo; salvar como MP4 (iPhone) ou WebM/MP4 (Android). | Nenhum além do salvar atual |
+| 2 | **Mais ajustes na câmera, estilo Instagram Edits** (lista a complementar) | Novas camadas no shader: exposição, realces, sombras, temperatura, matiz, nitidez, desbotado etc. Nitidez e desfoque leem pixels vizinhos (mais pesado que os ajustes atuais; medir o fps). | Preferências, como hoje (`localStorage`) |
+| 3 | **Botão de explicação em cada ajuste** | Ícone "?" ao lado de cada ajuste abrindo um texto curto: o que ele muda na foto e como interage com a paleta/filtro do app (ex.: contraste antes do mapa de cores espalha mais a imagem pelas cores da paleta). | Nenhum (textos fixos no app) |
+| 4 | **Aba de edição de fotos e vídeos já tirados** (como o Edits) | Fotos: já existe a base (galeria + filtros + ajustes); vira uma aba própria. Vídeos: tocar o vídeo pelo renderer e regravar com o filtro — leva o tempo do vídeo, ou usar WebCodecs para ser mais rápido onde houver. Decidir se a aba lista só o que vem da galeria do celular ou também guarda um histórico dentro do app. | Nenhum se abrir da galeria do celular; IndexedDB se o app mantiver um histórico próprio |
+| 5 | **Editor de paleta mostrando mais a câmera/foto** (layout a definir) | Hoje a folha cobre ~75% da tela. Ideias: folha que minimiza para uma barra, ou editor compacto numa faixa horizontal com a câmera em cima. | Nenhum |
+| 6 | **Foto escolhida como ícone da paleta** | No editor, escolher uma foto; recortar em círculo e reduzir (ex.: 128 px) para o carrossel. | IndexedDB (imagem por paleta) |
+
+### Sobre armazenamento
+
+- **Não é preciso servidor nem banco de dados online** para nada acima: tudo continua rodando no aparelho, e as fotos/vídeos vão para a galeria do celular.
+- **IndexedDB** (banco local do navegador, sem servidor) passa a ser necessário para guardar imagens dentro do app: ícones das paletas (item 6) e, se desejado, um histórico de fotos/vídeos (item 4). O `localStorage` atual serve só para textos pequenos (~5 MB no total).
+- **Risco:** o navegador pode apagar dados de sites. No iPhone, o Safari apaga os dados de sites não instalados depois de ~7 dias sem uso; apps instalados na tela inicial ficam protegidos. Isso aumenta a importância da fase 8 (app instalável) e de pedir armazenamento persistente (`navigator.storage.persist()`).
+- **Banco de dados online só seria necessário** para: sincronizar paletas entre aparelhos, contas de usuário, compartilhar paletas com outras pessoas ou backup na nuvem.
+
 ## Limitações conhecidas (comportamento esperado)
 
 - **iPhone: salvar abre a folha do sistema.** O Safari não grava direto no app Fotos; a folha mostra também opções de compartilhar, que não dá para esconder.
