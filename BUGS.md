@@ -46,6 +46,7 @@ Ainda não iniciadas. Nenhuma precisa de servidor ou banco de dados online; algu
 | 4 | **Aba de edição de fotos e vídeos já tirados** (como o Edits) | Fotos: já existe a base (galeria + filtros + ajustes); vira uma aba própria. Vídeos: tocar o vídeo pelo renderer e regravar com o filtro — leva o tempo do vídeo, ou usar WebCodecs para ser mais rápido onde houver. Decidir se a aba lista só o que vem da galeria do celular ou também guarda um histórico dentro do app. | Nenhum se abrir da galeria do celular; IndexedDB se o app mantiver um histórico próprio |
 | 5 | **Editor de paleta mostrando mais a câmera/foto** (layout a definir) | Hoje a folha cobre ~75% da tela. Ideias: folha que minimiza para uma barra, ou editor compacto numa faixa horizontal com a câmera em cima. | Nenhum |
 | 6 | **Foto escolhida como ícone da paleta** | No editor, escolher uma foto; recortar em círculo e reduzir (ex.: 128 px) para o carrossel. | IndexedDB (imagem por paleta) |
+| 7 | **Exportar e importar paletas** | Botões no painel de ajustes: exportar gera um arquivo `.json` com as paletas do usuário (baixado ou enviado pela folha do sistema); importar lê esse arquivo, valida (reaproveitando a leitura que já ignora dados corrompidos) e junta às paletas existentes sem duplicar. Serve de backup, para trocar de celular/navegador e para passar paletas a outra pessoa. Se o item 6 existir, o arquivo precisa levar as imagens dos ícones junto. | Nenhum novo (usa o `localStorage` atual) |
 
 ### Sobre armazenamento
 
