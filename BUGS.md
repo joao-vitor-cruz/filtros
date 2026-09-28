@@ -1,5 +1,18 @@
 # Bugs e pendências
 
+## Ordem de prioridade
+
+| Ordem | Tarefa | Por quê nesta posição |
+|-------|--------|------------------------|
+| 0 | **Testar no celular** (aberto nº 2) — feito pelo usuário | Não custa desenvolvimento e pode revelar problemas que mudam as prioridades abaixo. Pode rodar em paralelo com a tarefa 1. |
+| 1 | **Exportar e importar paletas** (pedido nº 7) | Pequena, independente, e protege as paletas já criadas contra perda antes de qualquer mudança maior. |
+| 2 | **Fase 8: app instalável** (aberto nº 1) | Protege os dados no iPhone (sem a limpeza de 7 dias) e é pré-requisito para guardar imagens com segurança (pedidos 4 e 6). Tem um bug difícil (atualização do service worker) e precisa juntar o branch com a galeria. |
+| 3 | **Vídeo com filtro** (pedido nº 1) | Maior ganho para o usuário; independente das demais. É base para a edição de vídeos da tarefa 6. |
+| 4 | **Ajustes estilo Edits + botão de explicação** (pedidos nº 2 e 3) | Fazer juntos: cada ajuste novo já nasce com sua explicação. Aguarda a lista completa de ajustes. |
+| 5 | **Editor de paleta mostrando mais a imagem** (pedido nº 5) | Precisa definir o layout antes. Pode ser feito junto com a tarefa 4, que também mexe em painéis. |
+| 6 | **Aba de edição de fotos e vídeos** (pedido nº 4) | Depende do vídeo (3) e dos novos ajustes (4) para valer a pena como aba própria. |
+| 7 | **Foto como ícone da paleta** (pedido nº 6) | Precisa do IndexedDB, do app instalado (2) para não perder as imagens, e de ajustar o formato do exportar (1) para levar as imagens. |
+
 ## Abertos
 
 ### 1. Service worker não recebe atualizações (fase 8, não publicada)
