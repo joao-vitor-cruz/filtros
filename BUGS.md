@@ -5,7 +5,7 @@
 | Ordem | Tarefa | Por quê nesta posição |
 |-------|--------|------------------------|
 | 0 | **Testar no celular** (aberto nº 2) — feito pelo usuário | Não custa desenvolvimento e pode revelar problemas que mudam as prioridades abaixo. Pode rodar em paralelo com a tarefa 1. |
-| 1 | **Exportar e importar paletas** (pedido nº 7) | Pequena, independente, e protege as paletas já criadas contra perda antes de qualquer mudança maior. |
+| ~~1~~ | ~~**Exportar e importar paletas** (pedido nº 7)~~ | **Feito.** Painel de ajustes → "Minhas paletas". |
 | 2 | **Fase 8: app instalável** (aberto nº 1) | Protege os dados no iPhone (sem a limpeza de 7 dias) e é pré-requisito para guardar imagens com segurança (pedidos 4 e 6). Tem um bug difícil (atualização do service worker) e precisa juntar o branch com a galeria. |
 | 3 | **Vídeo com filtro** (pedido nº 1) | Maior ganho para o usuário; independente das demais. É base para a edição de vídeos da tarefa 6. |
 | 4 | **Ajustes estilo Edits + botão de explicação** (pedidos nº 2 e 3) | Fazer juntos: cada ajuste novo já nasce com sua explicação. Aguarda a lista completa de ajustes. |
@@ -59,7 +59,7 @@ Ainda não iniciadas. Nenhuma precisa de servidor ou banco de dados online; algu
 | 4 | **Aba de edição de fotos e vídeos já tirados** (como o Edits) | Fotos: já existe a base (galeria + filtros + ajustes); vira uma aba própria. Vídeos: tocar o vídeo pelo renderer e regravar com o filtro — leva o tempo do vídeo, ou usar WebCodecs para ser mais rápido onde houver. Decidir se a aba lista só o que vem da galeria do celular ou também guarda um histórico dentro do app. | Nenhum se abrir da galeria do celular; IndexedDB se o app mantiver um histórico próprio |
 | 5 | **Editor de paleta mostrando mais a câmera/foto** (layout a definir) | Hoje a folha cobre ~75% da tela. Ideias: folha que minimiza para uma barra, ou editor compacto numa faixa horizontal com a câmera em cima. | Nenhum |
 | 6 | **Foto escolhida como ícone da paleta** | No editor, escolher uma foto; recortar em círculo e reduzir (ex.: 128 px) para o carrossel. | IndexedDB (imagem por paleta) |
-| 7 | **Exportar e importar paletas** | Botões no painel de ajustes: exportar gera um arquivo `.json` com as paletas do usuário (baixado ou enviado pela folha do sistema); importar lê esse arquivo, valida (reaproveitando a leitura que já ignora dados corrompidos) e junta às paletas existentes sem duplicar. Serve de backup, para trocar de celular/navegador e para passar paletas a outra pessoa. Se o item 6 existir, o arquivo precisa levar as imagens dos ícones junto. | Nenhum novo (usa o `localStorage` atual) |
+| 7 | ~~**Exportar e importar paletas**~~ | **Feito.** Painel de ajustes → "Minhas paletas": exportar gera `filtros-paletas-AAAAMMDD.json` (no iPhone, pela folha do sistema → "Salvar em Arquivos"); importar junta ao que já existe, ignora paletas iguais (mesmas cores e modo), renumera nomes repetidos ("Praia 2") e recusa arquivos que não são do app. Quando o item 6 existir, o formato precisa levar as imagens dos ícones (subir a versão do arquivo). | — |
 
 ### Sobre armazenamento
 
@@ -73,7 +73,7 @@ Ainda não iniciadas. Nenhuma precisa de servidor ou banco de dados online; algu
 - **iPhone: salvar abre a folha do sistema.** O Safari não grava direto no app Fotos; a folha mostra também opções de compartilhar, que não dá para esconder.
 - **iPhone: sem vibração** ao tirar a foto (o Safari não tem `navigator.vibrate`).
 - **Modo Tinta é sutil em cores muito saturadas.** O *soft light* não consegue clarear um canal que está em zero (ex.: verde puro não ganha vermelho).
-- **Paletas, filtro escolhido e ajustes ficam só no navegador.** Limpar os dados do navegador ou trocar de aparelho apaga tudo.
+- **Paletas, filtro escolhido e ajustes ficam só no navegador.** Limpar os dados do navegador ou trocar de aparelho apaga tudo; para as paletas, use Exportar/Importar como backup.
 - **A foto da câmera mostra um pouco mais que o preview.** A foto usa o quadro inteiro da câmera; o preview corta para preencher a tela.
 - **O grão fica mais fino em fotos grandes da galeria**, porque ele é gerado por pixel da foto.
 

@@ -3,6 +3,8 @@ import { ADJUSTMENT_RANGES, DEFAULT_ADJUSTMENTS, isDefaultAdjustments, type Adju
 type Callbacks = {
   onAdjust: (adjustments: Adjustments) => void;
   onMirrorChange: (mirror: boolean) => void;
+  onExport: () => void;
+  onImport: (file: File) => void;
   onClose: () => void;
 };
 
@@ -20,6 +22,8 @@ export class SettingsPanel {
   private readonly resetBtn: HTMLButtonElement;
   private readonly mirrorInput: HTMLInputElement;
   private readonly title: HTMLElement;
+  private readonly exportBtn: HTMLButtonElement;
+  private readonly transferHint: HTMLElement;
 
   constructor(
     private readonly root: HTMLElement,
@@ -29,6 +33,9 @@ export class SettingsPanel {
     this.resetBtn = root.querySelector<HTMLButtonElement>('#settings-reset')!;
     this.mirrorInput = root.querySelector<HTMLInputElement>('#settings-mirror')!;
     this.title = root.querySelector<HTMLElement>('#settings-title')!;
+    this.exportBtn = root.querySelector<HTMLButtonElement>('#export-palettes')!;
+    this.transferHint = root.querySelector<HTMLElement>('#transfer-hint')!;
+    const importInput = root.querySelector<HTMLInputElement>('#import-input')!;
 
     for (const key of Object.keys(LABELS) as (keyof Adjustments)[]) list.append(this.createSlider(key));
 
@@ -37,6 +44,13 @@ export class SettingsPanel {
       callbacks.onAdjust({ ...this.values });
     });
     this.mirrorInput.addEventListener('change', () => callbacks.onMirrorChange(this.mirrorInput.checked));
+    this.exportBtn.addEventListener('click', () => callbacks.onExport());
+    root.querySelector('#import-palettes')!.addEventListener('click', () => importInput.click());
+    importInput.addEventListener('change', () => {
+      const file = importInput.files?.[0];
+      importInput.value = ''; // permite importar o mesmo arquivo de novo
+      if (file) callbacks.onImport(file);
+    });
     root.querySelector('#settings-done')!.addEventListener('click', () => callbacks.onClose());
     root.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -50,15 +64,25 @@ export class SettingsPanel {
     return !this.root.hidden;
   }
 
-  open(adjustments: Adjustments, mirror: boolean): void {
+  open(adjustments: Adjustments, mirror: boolean, paletteCount: number): void {
     this.set(adjustments);
     this.mirrorInput.checked = mirror;
+    this.setPaletteCount(paletteCount);
     this.root.hidden = false;
     this.title.focus();
   }
 
   close(): void {
     this.root.hidden = true;
+  }
+
+  /** Atualiza o texto e o botão de exportar conforme quantas paletas o usuário criou. */
+  setPaletteCount(count: number): void {
+    this.exportBtn.disabled = count === 0;
+    this.transferHint.textContent =
+      count === 0
+        ? 'Você ainda não criou paletas. Dá para importar um arquivo exportado de outro aparelho.'
+        : `${count === 1 ? '1 paleta criada' : `${count} paletas criadas`}. Exporte para ter um backup ou levar para outro aparelho.`;
   }
 
   private set(adjustments: Adjustments): void {

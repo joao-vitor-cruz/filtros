@@ -29,7 +29,8 @@ import { PalettePicker } from './ui/palette-picker';
 import { PaletteEditor, type PaletteDraft } from './ui/palette-editor';
 import { SettingsPanel } from './ui/settings';
 import { captureVideoFrame, encodeJpeg, loadImageFile, photoFileName } from './capture/image';
-import { savePhoto } from './capture/save';
+import { saveFile } from './capture/save';
+import { buildExport, exportFileName, ImportError, mergePalettes, parseImport } from './palette/transfer';
 
 type AppState = 'loading' | 'running' | 'error';
 
@@ -291,6 +292,8 @@ const settings = new SettingsPanel(settingsRoot, {
     mirrorPhotos = value;
     saveMirrorPhotos(value);
   },
+  onExport: exportPalettes,
+  onImport: importPalettes,
   onClose: () => {
     settings.close();
     delete app.dataset.sheet;
@@ -301,10 +304,55 @@ const settings = new SettingsPanel(settingsRoot, {
 settingsBtn.addEventListener('click', () => {
   if (photo || app.dataset.sheet) return;
   app.dataset.sheet = 'settings';
-  settings.open(adjustments, mirrorPhotos);
+  settings.open(adjustments, mirrorPhotos, customPalettes.length);
 });
 // Sem WebGL não há filtros para ajustar.
 settingsBtn.hidden = !renderer;
+
+// ---------- Exportar e importar paletas ----------
+
+const plural = (n: number, one: string, many: string) => (n === 1 ? `1 ${one}` : `${n} ${many}`);
+
+async function exportPalettes(): Promise<void> {
+  if (customPalettes.length === 0) return;
+  try {
+    const blob = new Blob([buildExport(customPalettes)], { type: 'application/json' });
+    const result = await saveFile(blob, exportFileName());
+    if (result === 'saved') showNotice(`${plural(customPalettes.length, 'paleta exportada', 'paletas exportadas')}`);
+  } catch (err) {
+    console.error(err);
+    showNotice('Não foi possível exportar');
+  }
+}
+
+const IMPORT_ERRORS: Record<ImportError['kind'], string> = {
+  invalid: 'Esse arquivo não é de paletas do Filtros',
+  empty: 'Nenhuma paleta válida nesse arquivo',
+  'too-big': 'Arquivo grande demais para ser de paletas',
+};
+
+async function importPalettes(file: File): Promise<void> {
+  let incoming;
+  try {
+    incoming = parseImport(await file.text());
+  } catch (err) {
+    showNotice(err instanceof ImportError ? IMPORT_ERRORS[err.kind] : 'Não foi possível ler o arquivo');
+    return;
+  }
+  const result = mergePalettes(customPalettes, incoming);
+  if (result.added === 0) {
+    showNotice('Você já tem todas as paletas desse arquivo');
+    return;
+  }
+  const currentId = options[selected].id;
+  customPalettes = result.palettes;
+  const message = plural(result.added, 'paleta importada', 'paletas importadas');
+  persist(result.skipped > 0 ? `${message} (${result.skipped} já existia${result.skipped > 1 ? 'm' : ''})` : message);
+  // Mantém o filtro que estava escolhido; as importadas entram no fim do carrossel.
+  refreshOptions(currentId, selected);
+  selectFilter(selected, false, false);
+  settings.setPaletteCount(customPalettes.length);
+}
 
 // ---------- Foto ----------
 
@@ -363,7 +411,7 @@ async function saveCurrentPhoto(): Promise<void> {
   if (!photo) return;
   saveBtn.disabled = true;
   try {
-    const result = await savePhoto(photo.blob, photo.name);
+    const result = await saveFile(photo.blob, photo.name);
     if (result === 'saved') {
       closeReview();
       showNotice('Foto salva');
@@ -496,7 +544,7 @@ async function saveGalleryPhoto(): Promise<void> {
   try {
     const image = renderer.capture();
     if (!image) throw new Error('Sem imagem');
-    const result = await savePhoto(await encodeJpeg(image), photoFileName());
+    const result = await saveFile(await encodeJpeg(image), photoFileName());
     // Continua na foto: dá para salvar outra versão com outro filtro.
     if (result === 'saved') showNotice('Foto salva');
   } catch (err) {

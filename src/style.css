@@ -945,6 +945,31 @@ fieldset.field legend {
   outline-offset: 2px;
 }
 
+/* ---------- Exportar e importar paletas ---------- */
+
+.palette-transfer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid rgb(255 255 255 / 0.12);
+}
+
+.palette-transfer h3 {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.palette-transfer .sheet-hint {
+  margin: 0;
+}
+
+.transfer-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 /* Tela larga (tablet/computador): controles numa coluna central. */
 @media (min-width: 640px) {
   .intensity {

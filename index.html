@@ -139,6 +139,15 @@
             </span>
             <input id="settings-mirror" type="checkbox" role="switch" />
           </label>
+          <section class="palette-transfer" aria-labelledby="transfer-title">
+            <h3 id="transfer-title">Minhas paletas</h3>
+            <p class="sheet-hint" id="transfer-hint"></p>
+            <div class="transfer-actions">
+              <button class="ghost-btn compact" id="export-palettes" type="button">Exportar</button>
+              <button class="ghost-btn compact" id="import-palettes" type="button">Importar</button>
+            </div>
+            <input id="import-input" type="file" accept=".json,application/json" hidden />
+          </section>
           <button class="primary-btn" id="settings-done" type="button">Pronto</button>
         </div>
       </section>

@@ -9,12 +9,12 @@ export function isIOS(nav: NavigatorLike = navigator): boolean {
 }
 
 /**
- * Salva a foto no aparelho.
- * - iPhone/iPad: o Safari não grava direto na galeria; o caminho é a folha do
- *   sistema, onde a opção "Salvar imagem" leva a foto para o app Fotos.
- * - Demais: download do arquivo (no Android vai para Downloads e aparece na galeria).
+ * Salva um arquivo (foto ou paletas exportadas) no aparelho.
+ * - iPhone/iPad: o Safari não grava direto na galeria nem em Arquivos; o caminho é
+ *   a folha do sistema, com "Salvar imagem" (foto) ou "Salvar em Arquivos".
+ * - Demais: download do arquivo (no Android vai para Downloads; fotos aparecem na galeria).
  */
-export async function savePhoto(blob: Blob, fileName: string): Promise<SaveResult> {
+export async function saveFile(blob: Blob, fileName: string): Promise<SaveResult> {
   const file = new File([blob], fileName, { type: blob.type });
   if (isIOS() && navigator.canShare?.({ files: [file] })) {
     try {
