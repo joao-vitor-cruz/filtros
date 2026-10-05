@@ -29,7 +29,7 @@ export function buildExport(palettes: readonly Palette[], date = new Date()): st
       type: TYPE,
       version: VERSION,
       exportedAt: date.toISOString(),
-      palettes: palettes.map(({ id, name, colors, mode }) => ({ id, name, colors, mode })),
+      palettes: palettes.map(({ id, name, colors, mode, icon }) => ({ id, name, colors, mode, icon })),
     },
     null,
     2,

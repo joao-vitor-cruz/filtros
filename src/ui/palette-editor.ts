@@ -1,8 +1,13 @@
 import { cssGradient, MAX_COLORS, MIN_COLORS, mixHex, normalizeHex } from '../palette/palette';
 import { MAX_NAME_LENGTH } from '../palette/storage';
 import { FILTER_MODES, type FilterMode } from '../filter';
+import { loadImageFile } from '../capture/image';
+import { IconCropper } from './icon-cropper';
 
-export type PaletteDraft = { name: string; colors: string[]; mode: FilterMode };
+export type PaletteDraft = { name: string; colors: string[]; mode: FilterMode; icon?: string };
+
+/** Maior lado da foto aberta para recortar o ícone (o ícone final tem 128 px). */
+const CROP_SOURCE_SIDE = 1024;
 
 type Callbacks = {
   /** Chamado a cada mudança de cor ou modo, para o preview da câmera acompanhar. */
@@ -24,6 +29,9 @@ export class PaletteEditor {
   private readonly addBtn: HTMLButtonElement;
   private readonly deleteBtn: HTMLButtonElement;
   private readonly modeInputs: HTMLInputElement[];
+  private readonly iconPreview: HTMLElement;
+  private readonly iconRemove: HTMLButtonElement;
+  private readonly cropper: IconCropper;
 
   constructor(
     private readonly root: HTMLElement,
@@ -37,6 +45,21 @@ export class PaletteEditor {
     this.deleteBtn = $(root, '#editor-delete');
     this.nameInput.maxLength = MAX_NAME_LENGTH;
     this.modeInputs = this.createModeOptions($(root, '#editor-modes'));
+    this.iconPreview = $(root, '#editor-icon-preview');
+    this.iconRemove = $(root, '#editor-icon-remove');
+    this.cropper = new IconCropper($(root, '#icon-cropper'));
+
+    const iconInput = $<HTMLInputElement>(root, '#editor-icon-input');
+    $(root, '#editor-icon-pick').addEventListener('click', () => iconInput.click());
+    iconInput.addEventListener('change', async () => {
+      const file = iconInput.files?.[0];
+      iconInput.value = ''; // permite escolher a mesma foto de novo
+      if (file) await this.pickIcon(file);
+    });
+    this.iconRemove.addEventListener('click', () => {
+      delete this.draft.icon;
+      this.renderIcon();
+    });
 
     this.nameInput.addEventListener('input', () => (this.draft.name = this.nameInput.value));
     this.addBtn.addEventListener('click', () => this.addColor());
@@ -59,7 +82,12 @@ export class PaletteEditor {
   }
 
   open(initial: PaletteDraft, mode: 'create' | 'edit'): void {
-    this.draft = { name: initial.name, colors: initial.colors.map(normalizeHex), mode: initial.mode };
+    this.draft = {
+      name: initial.name,
+      colors: initial.colors.map(normalizeHex),
+      mode: initial.mode,
+      ...(initial.icon ? { icon: initial.icon } : {}),
+    };
     this.modeInputs.forEach((input) => (input.checked = input.value === initial.mode));
     this.title.textContent = mode === 'create' ? 'Nova paleta' : 'Editar paleta';
     this.deleteBtn.hidden = mode === 'create';
@@ -72,6 +100,29 @@ export class PaletteEditor {
 
   close(): void {
     this.root.hidden = true;
+  }
+
+  private async pickIcon(file: File): Promise<void> {
+    let image: HTMLCanvasElement;
+    try {
+      image = await loadImageFile(file, CROP_SOURCE_SIDE);
+    } catch {
+      this.iconPreview.title = 'Não foi possível abrir essa imagem';
+      return;
+    }
+    const icon = await this.cropper.open(image);
+    if (icon) {
+      this.draft.icon = icon;
+      this.renderIcon();
+    }
+    $(this.root, '#editor-icon-pick').focus();
+  }
+
+  /** Círculo de prévia: a foto com um anel nas cores da paleta, ou só o degradê. */
+  private renderIcon(): void {
+    this.iconPreview.style.background = iconBackground(this.draft.colors, this.draft.icon);
+    this.iconPreview.classList.toggle('has-icon', !!this.draft.icon);
+    this.iconRemove.hidden = !this.draft.icon;
   }
 
   private changed(): void {
@@ -122,6 +173,7 @@ export class PaletteEditor {
     const { colors } = this.draft;
     this.gradient.style.background = cssGradient(colors);
     this.addBtn.hidden = colors.length >= MAX_COLORS;
+    this.renderIcon();
     this.list.replaceChildren(...colors.map((color, i) => this.createRow(color, i)));
   }
 
@@ -159,6 +211,7 @@ export class PaletteEditor {
       swatch.style.background = colors[index];
       hex.textContent = colors[index];
       this.gradient.style.background = cssGradient(colors);
+      this.renderIcon();
       this.preview();
     });
 
@@ -203,4 +256,13 @@ export class PaletteEditor {
     button.addEventListener('click', onClick);
     return button;
   }
+}
+
+/**
+ * Fundo de um círculo de paleta: com ícone, a foto por dentro e o degradê da
+ * paleta só na borda (anel); sem ícone, o degradê inteiro.
+ */
+export function iconBackground(colors: string[], icon?: string): string {
+  const gradient = cssGradient(colors, '135deg');
+  return icon ? `url("${icon}") center / cover no-repeat padding-box, ${gradient} border-box` : gradient;
 }

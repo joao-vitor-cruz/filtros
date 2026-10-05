@@ -12,7 +12,7 @@
 | ~~—~~ | ~~**Zoom da câmera** (pedido nº 8)~~ | **Feito.** Só pinça com dois dedos (o nível aparece no topo durante o gesto). |
 | 5 | **Editor de paleta mostrando mais a imagem** (pedido nº 5) | Precisa definir o layout antes. Pode ser feito junto com a tarefa 4, que também mexe em painéis. |
 | 6 | **Aba de edição de fotos e vídeos** (pedido nº 4) | Depende do vídeo (3) e dos novos ajustes (4) para valer a pena como aba própria. |
-| 7 | **Foto como ícone da paleta** (pedido nº 6) | Precisa do IndexedDB, do app instalado (2) para não perder as imagens, e de ajustar o formato do exportar (1) para levar as imagens. |
+| ~~7~~ | ~~**Foto como ícone da paleta** (pedido nº 6)~~ | **Feito.** Editor da paleta → Ícone → Escolher foto. |
 
 ## Abertos
 
@@ -59,7 +59,7 @@ Ainda não iniciadas. Nenhuma precisa de servidor ou banco de dados online; algu
 | 3 | ~~**Botão de explicação em cada ajuste**~~ **Feito**: cada "?" diz o que o ajuste faz e em que ponto age em relação à paleta | Ícone "?" ao lado de cada ajuste abrindo um texto curto: o que ele muda na foto e como interage com a paleta/filtro do app (ex.: contraste antes do mapa de cores espalha mais a imagem pelas cores da paleta). | Nenhum (textos fixos no app) |
 | 4 | **Aba de edição de fotos e vídeos já tirados** (como o Edits) | Fotos: já existe a base (galeria + filtros + ajustes); vira uma aba própria. Vídeos: tocar o vídeo pelo renderer e regravar com o filtro — leva o tempo do vídeo, ou usar WebCodecs para ser mais rápido onde houver. Decidir se a aba lista só o que vem da galeria do celular ou também guarda um histórico dentro do app. | Nenhum se abrir da galeria do celular; IndexedDB se o app mantiver um histórico próprio |
 | 5 | **Editor de paleta mostrando mais a câmera/foto** (layout a definir) | Hoje a folha cobre ~75% da tela. Ideias: folha que minimiza para uma barra, ou editor compacto numa faixa horizontal com a câmera em cima. | Nenhum |
-| 6 | **Foto escolhida como ícone da paleta** | No editor, escolher uma foto; recortar em círculo e reduzir (ex.: 128 px) para o carrossel. | IndexedDB (imagem por paleta) |
+| 6 | ~~**Foto escolhida como ícone da paleta**~~ **Feito** | Só nas paletas do usuário. No editor: Ícone → Escolher foto (da galeria) → recorte em círculo (arrastar e zoom) → JPEG 128×128 (~1–8 KB) guardado junto com a paleta no `localStorage` (não precisou de IndexedDB). No carrossel, a foto por dentro e as cores da paleta num anel. Vai junto no exportar/importar; ícones que não sejam imagens embutidas válidas são descartados. | Junto com a paleta (`localStorage`) |
 | 8 | ~~**Zoom da câmera**~~ **Feito** | Zoom da própria câmera quando o navegador oferece (Android/Chrome, até 10×, incluindo grande-angular); senão zoom digital no shader até 4× (iPhone). Pinça com dois dedos; o nível aparece por um instante no topo (sem botão, a pedido). No computador não há zoom. | — |
 | 7 | ~~**Exportar e importar paletas**~~ | **Feito.** Painel de ajustes → "Minhas paletas": exportar gera `filtros-paletas-AAAAMMDD.json` (no iPhone, pela folha do sistema → "Salvar em Arquivos"); importar junta ao que já existe, ignora paletas iguais (mesmas cores e modo), renumera nomes repetidos ("Praia 2") e recusa arquivos que não são do app. Quando o item 6 existir, o formato precisa levar as imagens dos ícones (subir a versão do arquivo). | — |
 

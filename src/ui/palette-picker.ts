@@ -1,5 +1,5 @@
 import type { FilterOption } from '../state';
-import { cssGradient } from '../palette/palette';
+import { iconBackground } from './palette-editor';
 
 type Callbacks = {
   onSelect: (index: number) => void;
@@ -71,7 +71,8 @@ export class PalettePicker {
     const swatch = document.createElement('span');
     swatch.className = 'palette-swatch';
     if (option.palette) {
-      swatch.style.background = cssGradient(option.palette.colors, '135deg');
+      swatch.style.background = iconBackground(option.palette.colors, option.palette.icon);
+      swatch.classList.toggle('has-icon', !!option.palette.icon);
     } else {
       swatch.classList.add('original');
     }

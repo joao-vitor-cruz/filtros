@@ -9,6 +9,8 @@ export type Palette = {
   colors: string[];
   /** Como as cores são aplicadas (mapa de cores, tons divididos, tinta ou pôster). */
   mode: FilterMode;
+  /** Foto escolhida pelo usuário para o círculo do carrossel (JPEG 128×128 em data URL). */
+  icon?: string;
   builtIn: boolean;
 };
 

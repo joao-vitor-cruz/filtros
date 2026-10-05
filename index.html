@@ -119,6 +119,16 @@
             <input id="editor-name" type="text" autocomplete="off" enterkeyhint="done" placeholder="Minha paleta" />
           </label>
 
+          <div class="field">
+            <span>Ícone</span>
+            <div class="icon-row">
+              <span class="icon-preview" id="editor-icon-preview" aria-hidden="true"></span>
+              <button class="ghost-btn compact" id="editor-icon-pick" type="button">Escolher foto</button>
+              <button class="ghost-btn compact danger" id="editor-icon-remove" type="button" hidden>Remover</button>
+            </div>
+            <input id="editor-icon-input" type="file" accept="image/*" hidden />
+          </div>
+
           <fieldset class="field">
             <legend>Modo</legend>
             <div class="mode-options" id="editor-modes"></div>
@@ -135,6 +145,19 @@
             <button class="primary-btn" id="editor-save" type="submit">Salvar paleta</button>
           </footer>
         </form>
+        <div class="cropper" id="icon-cropper" role="dialog" aria-modal="true" aria-labelledby="cropper-title" hidden>
+          <h3 id="cropper-title" tabindex="-1">Enquadrar ícone</h3>
+          <p class="sheet-hint">Arraste a foto para enquadrar.</p>
+          <div class="cropper-view" id="cropper-view"></div>
+          <label class="cropper-zoom">
+            <span>Zoom</span>
+            <input id="cropper-zoom" type="range" min="100" max="400" step="1" value="100" />
+          </label>
+          <div class="cropper-actions">
+            <button class="ghost-btn compact" id="cropper-cancel" type="button">Cancelar</button>
+            <button class="primary-btn compact" id="cropper-use" type="button">Usar foto</button>
+          </div>
+        </div>
       </section>
 
       <section class="sheet edit-sheet" id="settings" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>

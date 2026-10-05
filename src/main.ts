@@ -14,7 +14,7 @@ import {
   saveSelectedId,
   wrapIndex,
 } from './state';
-import { cssGradient, isValidPalette, type Palette } from './palette/palette';
+import { isValidPalette, type Palette } from './palette/palette';
 import { PRESETS } from './palette/presets';
 import type { FilterMode } from './filter';
 import {
@@ -26,7 +26,7 @@ import {
 } from './palette/storage';
 import { onHorizontalSwipe } from './ui/swipe';
 import { PalettePicker } from './ui/palette-picker';
-import { PaletteEditor, type PaletteDraft } from './ui/palette-editor';
+import { iconBackground, PaletteEditor, type PaletteDraft } from './ui/palette-editor';
 import { SettingsPanel } from './ui/settings';
 import { captureVideoFrame, encodeJpeg, loadImageFile, photoFileName } from './capture/image';
 import { saveFile } from './capture/save';
@@ -141,8 +141,9 @@ function showToast(index: number): void {
   const option = options[index];
   toastName.textContent = option.name;
   toastSwatch.style.background = option.palette
-    ? cssGradient(option.palette.colors, '135deg')
+    ? iconBackground(option.palette.colors, option.palette.icon)
     : 'transparent';
+  toastSwatch.classList.toggle('has-icon', !!option.palette?.icon);
   toast.classList.add('visible');
   clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => toast.classList.remove('visible'), 1200);
@@ -214,7 +215,7 @@ function openEditor(index: number | null): void {
   // Uma paleta nova começa com as cores do filtro atual, para servir de ponto de partida.
   const base = palette ?? options[selected].palette;
   const draft: PaletteDraft = palette
-    ? { name: palette.name, colors: palette.colors, mode: palette.mode }
+    ? { name: palette.name, colors: palette.colors, mode: palette.mode, icon: palette.icon }
     : {
         name: suggestName(customPalettes),
         colors: base ? base.colors : ['#1d3557', '#e63946', '#f1faee'],
@@ -261,6 +262,7 @@ function savePalette(draft: PaletteDraft): void {
     name: normalizeName(draft.name, suggestName(others)),
     colors: draft.colors,
     mode: draft.mode,
+    ...(draft.icon ? { icon: draft.icon } : {}),
     builtIn: false,
   };
   customPalettes = editingId

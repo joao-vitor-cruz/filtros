@@ -2,6 +2,17 @@ import { isValidPalette, MAX_COLORS, type Palette } from './palette';
 import { isFilterMode } from '../filter';
 
 const STORAGE_KEY = 'filtros:paletas';
+/** Um ícone de 128 px ocupa ~5–10 KB; acima disso não é um ícone gerado pelo app. */
+const MAX_ICON_LENGTH = 100_000;
+
+/** Aceita só imagens JPEG/PNG/WebP embutidas (data URL), de tamanho razoável. */
+export function isValidIcon(icon: unknown): icon is string {
+  return (
+    typeof icon === 'string' &&
+    icon.length <= MAX_ICON_LENGTH &&
+    /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/.test(icon)
+  );
+}
 export const MAX_NAME_LENGTH = 24;
 
 /**
@@ -22,7 +33,7 @@ export function parseStoredPalettes(raw: string | null): Palette[] {
   const palettes: Palette[] = [];
   for (const item of data) {
     if (!item || typeof item !== 'object') continue;
-    const { id, name, colors, mode } = item as Record<string, unknown>;
+    const { id, name, colors, mode, icon } = item as Record<string, unknown>;
     if (typeof id !== 'string' || !id || seen.has(id)) continue;
     if (!Array.isArray(colors) || !colors.every((c) => typeof c === 'string')) continue;
     if (!isValidPalette(colors as string[])) continue;
@@ -33,6 +44,7 @@ export function parseStoredPalettes(raw: string | null): Palette[] {
       colors: (colors as string[]).slice(0, MAX_COLORS).map((c) => c.toLowerCase()),
       // Paletas salvas antes da fase 7 não têm modo: usam o mapa de cores.
       mode: isFilterMode(mode) ? mode : 'gradient',
+      ...(isValidIcon(icon) ? { icon } : {}),
       builtIn: false,
     });
   }
@@ -40,7 +52,7 @@ export function parseStoredPalettes(raw: string | null): Palette[] {
 }
 
 export function serializePalettes(palettes: readonly Palette[]): string {
-  return JSON.stringify(palettes.map(({ id, name, colors, mode }) => ({ id, name, colors, mode })));
+  return JSON.stringify(palettes.map(({ id, name, colors, mode, icon }) => ({ id, name, colors, mode, icon })));
 }
 
 export function normalizeName(name: string, fallback: string): string {

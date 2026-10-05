@@ -296,6 +296,19 @@ body {
   transform: scale(1.08);
 }
 
+/* Com foto: a foto por dentro e o degradê da paleta num anel (a borda transparente
+   deixa aparecer a camada do degradê, desenhada até a borda). */
+.palette-swatch.has-icon,
+.filter-swatch.has-icon,
+.icon-preview.has-icon {
+  border: 3px solid transparent;
+  box-shadow: none;
+}
+
+.palette-item[aria-checked='true'] .palette-swatch.has-icon {
+  box-shadow: 0 0 0 2px var(--fg);
+}
+
 .palette-item:active .palette-swatch {
   transform: scale(0.94);
 }
@@ -1047,6 +1060,92 @@ fieldset.field legend {
 .switch-row input:focus-visible {
   outline: 2px solid var(--fg);
   outline-offset: 2px;
+}
+
+/* ---------- Ícone da paleta ---------- */
+
+.icon-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon-preview {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.35);
+}
+
+.cropper {
+  position: absolute;
+  inset: auto calc(16px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(16px + var(--safe-left));
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 16px;
+  background: #26262a;
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.6);
+  pointer-events: auto;
+}
+
+.cropper h3 {
+  margin: 0;
+  align-self: flex-start;
+  font-size: 1.0625rem;
+}
+
+.cropper h3:focus {
+  outline: none;
+}
+
+.cropper .sheet-hint {
+  align-self: flex-start;
+  margin: -6px 0 0;
+}
+
+.cropper-view {
+  position: relative;
+  width: min(220px, 60vw);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px var(--fg);
+  background: #000;
+  touch-action: none;
+  cursor: grab;
+}
+
+.cropper-image {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+}
+
+.cropper-zoom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  color: var(--fg-muted);
+  font-size: 0.875rem;
+}
+
+.cropper-zoom input {
+  flex: 1;
+  accent-color: var(--fg);
+}
+
+.cropper-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
 }
 
 /* ---------- Painel de ajustes (estilo Edits) ---------- */
