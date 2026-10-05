@@ -34,6 +34,7 @@ import { canRecordVideo, formatDuration, MAX_RECORDING_MS, Recorder, videoExtens
 import { clampZoom, DIGITAL_ZOOM, formatZoom, hardwareRange, type ZoomRange } from './zoom';
 import { onPinch } from './ui/pinch';
 import { buildExport, exportFileName, ImportError, mergePalettes, parseImport } from './palette/transfer';
+import { registerServiceWorker } from './pwa';
 
 type AppState = 'loading' | 'running' | 'error';
 
@@ -100,7 +101,8 @@ if (renderer && new URLSearchParams(location.search).has('debug')) {
     lastUpdate = now;
     fpsLabel.textContent =
       `${meter.fps.toFixed(0)} fps · ${app.dataset.render}\n` +
-      `vídeo ${video.videoWidth}×${video.videoHeight} · tela ${canvas.width}×${canvas.height}`;
+      `vídeo ${video.videoWidth}×${video.videoHeight} · tela ${canvas.width}×${canvas.height} (máx ${renderer!.maxDpr}x)\n` +
+      `versão ${__APP_VERSION__}`;
   });
 }
 
@@ -479,6 +481,7 @@ async function startRecording(): Promise<void> {
     const withAudio = await recorder.start();
     if (!withAudio) showNotice('Gravando sem som (microfone não liberado)');
     app.dataset.recording = 'true';
+    renderer.holdQuality = true;
     shutterBtn.classList.add('recording');
     shutterBtn.setAttribute('aria-label', 'Parar de gravar');
     recTimer.hidden = false;
@@ -501,6 +504,7 @@ async function stopRecording(): Promise<void> {
   clearInterval(recInterval);
   recTimer.hidden = true;
   delete app.dataset.recording;
+  if (renderer) renderer.holdQuality = false;
   shutterBtn.classList.remove('recording');
   setCaptureMode('video');
   const result = await recorder.stop();
@@ -724,3 +728,6 @@ errorGalleryBtn.hidden = !renderer;
 updateSourceUi();
 
 startCamera('environment');
+registerServiceWorker();
+// Para conferir a versão aberta (inclusive em testes automáticos).
+(window as unknown as { __APP_VERSION__: string }).__APP_VERSION__ = __APP_VERSION__;

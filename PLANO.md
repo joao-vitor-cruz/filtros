@@ -166,7 +166,7 @@ type Adjustments = {         // globais, salvos no navegador
 | **5. Foto** | Captura em resolução nativa, tela da foto com só "Salvar" (e X para descartar) | Foto salva na galeria do iOS e do Android |
 | **6. Editor de paleta** | Criar/editar/excluir paletas, persistência | Paleta criada continua lá após recarregar |
 | **7. Mais camadas** | Modos splitTone/tint/posterize, contraste, saturação, vinheta, grão | Todos os modos funcionam com paletas personalizadas |
-| **8. PWA e polimento** | Manifest, service worker, ícones, testes em aparelhos, ajustes de desempenho | Instalável; Lighthouse PWA ok |
+| **8. PWA e polimento** ✅ | Manifest, service worker gerado no build, ícones, resolução adaptativa do preview | Instalável (sem erros no Chromium); abre sem internet; atualiza sozinho |
 
 Cada fase gera algo testável no celular. As fases 1 a 5 formam o **MVP**.
 

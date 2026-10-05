@@ -1,6 +1,7 @@
 import vertexSource from './quad.vert.glsl?raw';
 import fragmentSource from './filter.frag.glsl?raw';
 import { canvasSize, containRect, coverScale, type Rect } from './cover';
+import { QualityMonitor } from './quality';
 import { buildGradient, GRADIENT_SIZE, MAX_COLORS, parseHex } from '../palette/palette';
 import { MODE_INDEX, type FilterMode } from '../filter';
 import { defaultAdjustments, type Adjustments } from '../edit/adjustments';
@@ -75,6 +76,9 @@ export class Renderer {
   private frameHandle = 0;
   private videoFrameHandle = 0;
   private resizeObserver: ResizeObserver;
+  private quality = new QualityMonitor();
+  /** Enquanto true (ex.: gravando vídeo), a resolução do preview não muda sozinha. */
+  holdQuality = false;
   private onFrame?: (now: number) => void;
 
   constructor(
@@ -169,6 +173,7 @@ export class Renderer {
   start(): void {
     if (this.running || this.source.kind === 'image') return;
     this.running = true;
+    this.quality.reset();
     this.scheduleFrame();
   }
 
@@ -318,20 +323,38 @@ export class Renderer {
     // requestVideoFrameCallback dispara só quando chega um frame novo da câmera,
     // evitando reenviar a mesma imagem para a GPU. Sem ele, usamos o rAF.
     if ('requestVideoFrameCallback' in this.video) {
-      this.videoFrameHandle = this.video.requestVideoFrameCallback((now) => this.tick(now));
+      this.videoFrameHandle = this.video.requestVideoFrameCallback((now, meta) => this.tick(now, meta.presentedFrames));
     } else {
       this.frameHandle = requestAnimationFrame((now) => this.tick(now));
     }
   }
 
-  private tick(now: number): void {
+  private tick(now: number, presentedFrames?: number): void {
     if (!this.running) return;
-    if (this.draw()) this.onFrame?.(now);
+    if (this.draw()) {
+      this.onFrame?.(now);
+      // Se o aparelho não acompanha a câmera, o preview baixa de resolução (a foto não muda).
+      // Durante a gravação o tamanho do canvas não pode mudar (o vídeo seria cortado).
+      if (presentedFrames !== undefined && !this.holdQuality && this.quality.record(presentedFrames)) {
+        console.info(`Preview reduzido para ${this.quality.maxDpr}x para manter a fluidez`);
+        this.resize();
+      }
+    }
     this.scheduleFrame();
   }
 
+  /** Densidade máxima do preview no momento (baixa sozinha em aparelhos lentos). */
+  get maxDpr(): number {
+    return this.quality.maxDpr;
+  }
+
   private resize(): void {
-    const [w, h] = canvasSize(this.canvas.clientWidth, this.canvas.clientHeight, window.devicePixelRatio);
+    const [w, h] = canvasSize(
+      this.canvas.clientWidth,
+      this.canvas.clientHeight,
+      window.devicePixelRatio,
+      this.quality.maxDpr,
+    );
     if (this.canvas.width !== w || this.canvas.height !== h) {
       this.canvas.width = w;
       this.canvas.height = h;

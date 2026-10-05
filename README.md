@@ -4,6 +4,15 @@ Câmera web, mobile-first, com filtros coloridos em tempo real e paletas escolhi
 
 **Versão publicada:** https://joao-vitor-cruz.github.io/filtros/ (atualizada automaticamente a cada push na `main`).
 
+## Instalar no celular
+
+O app pode ser instalado na tela inicial, abre em tela cheia e funciona sem internet:
+
+- **iPhone:** abra o link no Safari → botão Compartilhar → **Adicionar à Tela de Início**.
+- **Android:** abra no Chrome → menu ⋮ → **Instalar app** (ou aceite o aviso que aparece).
+
+Versões novas chegam sozinhas ao abrir o app com internet. Para ver qual versão está aberta, use `?debug` no endereço.
+
 ## Rodando
 
 ```bash

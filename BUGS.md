@@ -6,7 +6,7 @@
 |-------|--------|------------------------|
 | 0 | **Testar no celular** (aberto nº 2) — feito pelo usuário | Não custa desenvolvimento e pode revelar problemas que mudam as prioridades abaixo. Pode rodar em paralelo com a tarefa 1. |
 | ~~1~~ | ~~**Exportar e importar paletas** (pedido nº 7)~~ | **Feito.** Painel de ajustes → "Minhas paletas". |
-| 2 | **Fase 8: app instalável** (aberto nº 1) | Protege os dados no iPhone (sem a limpeza de 7 dias) e é pré-requisito para guardar imagens com segurança (pedidos 4 e 6). Tem um bug difícil (atualização do service worker) e precisa juntar o branch com a galeria. |
+| ~~2~~ | ~~**Fase 8: app instalável** (aberto nº 1)~~ | **Feito.** Instalável no iPhone e no Android, funciona sem internet, atualiza sozinho. |
 | ~~3~~ | ~~**Vídeo com filtro** (pedido nº 1)~~ | **Feito.** Seletor Foto/Vídeo acima do disparo. |
 | ~~4~~ | ~~**Ajustes estilo Edits + botão de explicação** (pedidos nº 2 e 3)~~ | **Feito.** Painel de ajustes com abas Luz, Cor, HSL, Rodas, Curvas, Estilo e Mais; "?" em cada ajuste. |
 | ~~—~~ | ~~**Zoom da câmera** (pedido nº 8)~~ | **Feito.** Só pinça com dois dedos (o nível aparece no topo durante o gesto). |
@@ -16,32 +16,22 @@
 
 ## Abertos
 
-### 1. Service worker não recebe atualizações (fase 8, não publicada)
+### ~~1. Service worker não recebe atualizações~~ (resolvido)
 
-**Onde:** branch `claude/sleepy-galileo-uezqdu` (trabalho da fase 8). A `main` e o site publicado não têm service worker, então não são afetados.
+**Causa encontrada:** nos testes (Chromium sem placa de vídeo), o desenho contínuo da câmera com WebGL ocupa o navegador e a verificação de versão do service worker não anda enquanto ele roda. Com a câmera negada, sem WebGL, ou com o desenho pausado (tela da foto), a mesma atualização funciona.
 
-**O que acontece:** depois que o app é instalado, publicar uma versão nova não chega a quem instalou. `registration.update()` fica pendente para sempre e o navegador nem chega a pedir o `sw.js` de novo ao servidor. Quem instalasse ficaria preso na versão antiga.
-
-**Como reproduzir (Chromium headless, câmera falsa):**
-1. `npm run build` e servir `dist/` em `http://localhost` com o caminho `/filtros/` (o Chrome não registra service worker em HTTPS com certificado autoassinado).
-2. Abrir o app; o service worker instala e guarda os arquivos (funciona).
-3. Mudar a linha `const VERSION = "…"` em `dist/sw.js`.
-4. Chamar `(await navigator.serviceWorker.getRegistration()).update()` na página: a promessa nunca resolve e o log do servidor não mostra novo pedido de `sw.js`.
-
-**O que já foi descartado:**
-- Numa página mínima (só registra um service worker simples), `update()` funciona. O problema está no app ou no service worker dele.
-- Tirar o tratamento de `fetch` do service worker do app **não** resolve.
-- Acontece tanto em perfil anônimo quanto em perfil normal do Chromium.
-
-**Próximos passos:**
-- Usar o `sw.js` do app na página mínima, para separar "service worker" de "página do app".
-- Remover partes da página (câmera, WebGL) até `update()` voltar a funcionar.
-- Olhar `chrome://serviceworker-internals` e testar num Chrome real/Android, para descartar algo específico do modo headless.
-- Só levar a fase 8 para a `main` depois de ver uma atualização chegar a um app instalado.
+**Correção (não depende do service worker se atualizar na hora):**
+- A página é sempre buscada na rede primeiro, então a versão nova chega ao abrir o app com internet.
+- O service worker guarda na hora os arquivos novos que a página pede, então a versão nova também funciona sem internet.
+- A verificação de versão é pedida ao abrir e sempre que o app sai ou volta da tela; em segundo plano o desenho para e o service worker novo é instalado.
+- Testado: com a versão A aberta e a câmera desenhando, publicar a B e reabrir abre a B, inclusive sem internet; ao ir para segundo plano, o service worker da B é instalado.
+- O modo `?debug` mostra a versão (data e hora do build) para conferir no celular.
 
 ### 2. Nada foi testado em aparelhos reais ainda
 
 Todos os testes foram no Chromium com câmera falsa e GPU emulada. Falta confirmar no celular:
+- instalar na tela inicial (iPhone: Safari → Compartilhar → Adicionar à Tela de Início; Android: Chrome → Instalar app) e abrir sem internet;
+- depois de uma publicação nova, a versão em `?debug` mudar ao reabrir o app instalado;
 - fps com a câmera em 1920×1080 e com vinheta e grão ligados (usar `?debug`);
 - Safari/iPhone: vídeo tocando sem toque, troca de câmera, câmera religando ao voltar para o app;
 - seletor de cores nativo (iPhone e Android) no editor de paletas;
@@ -67,7 +57,7 @@ Ainda não iniciadas. Nenhuma precisa de servidor ou banco de dados online; algu
 
 - **Não é preciso servidor nem banco de dados online** para nada acima: tudo continua rodando no aparelho, e as fotos/vídeos vão para a galeria do celular.
 - **IndexedDB** (banco local do navegador, sem servidor) passa a ser necessário para guardar imagens dentro do app: ícones das paletas (item 6) e, se desejado, um histórico de fotos/vídeos (item 4). O `localStorage` atual serve só para textos pequenos (~5 MB no total).
-- **Risco:** o navegador pode apagar dados de sites. No iPhone, o Safari apaga os dados de sites não instalados depois de ~7 dias sem uso; apps instalados na tela inicial ficam protegidos. Isso aumenta a importância da fase 8 (app instalável) e de pedir armazenamento persistente (`navigator.storage.persist()`).
+- **Risco:** o navegador pode apagar dados de sites. No iPhone, o Safari apaga os dados de sites não instalados depois de ~7 dias sem uso; apps instalados na tela inicial ficam protegidos — por isso vale instalar o app (fase 8, feita) e exportar as paletas como backup.
 - **Banco de dados online só seria necessário** para: sincronizar paletas entre aparelhos, contas de usuário, compartilhar paletas com outras pessoas ou backup na nuvem.
 
 ## Limitações conhecidas (comportamento esperado)
@@ -92,4 +82,6 @@ Ainda não iniciadas. Nenhuma precisa de servidor ou banco de dados online; algu
 | 4 | Nomes das paletas cortados no carrossel ("Synthwa…") | Cada item com a largura do próprio nome |
 | 4 | Primeiro item do carrossel não centralizava | Espaço lateral passou a considerar a margem da tela |
 | 7 | Barra de pré-visualização do editor espremida até virar uma linha | Itens das folhas não encolhem; o painel rola |
+| 8 | Service worker não atualizava com a câmera desenhando (visto sem GPU) | Página pela rede primeiro + arquivos novos guardados na hora + verificação ao sair/voltar da tela |
+| 8 | Ajuste automático de resolução podia mudar o tamanho do canvas no meio de uma gravação | Ajuste travado enquanto grava |
 | Galeria | Círculos do carrossel pareciam cortados nas beiradas (o degradê se repetia embaixo da borda) | Anel feito com sombra interna; círculos maiores (56 → 64 px) |
