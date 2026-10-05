@@ -31,7 +31,7 @@ import { SettingsPanel } from './ui/settings';
 import { captureVideoFrame, encodeJpeg, loadImageFile, photoFileName } from './capture/image';
 import { saveFile } from './capture/save';
 import { canRecordVideo, formatDuration, MAX_RECORDING_MS, Recorder, videoExtension } from './capture/recorder';
-import { clampZoom, DIGITAL_ZOOM, formatZoom, hardwareRange, nextPreset, zoomPresets, type ZoomRange } from './zoom';
+import { clampZoom, DIGITAL_ZOOM, formatZoom, hardwareRange, type ZoomRange } from './zoom';
 import { onPinch } from './ui/pinch';
 import { buildExport, exportFileName, ImportError, mergePalettes, parseImport } from './palette/transfer';
 
@@ -71,7 +71,6 @@ const galleryInput = $<HTMLInputElement>('#gallery-input');
 const gallerySaveBtn = $<HTMLButtonElement>('#gallery-save');
 const galleryCloseBtn = $<HTMLButtonElement>('#gallery-close');
 const errorGalleryBtn = $<HTMLButtonElement>('#error-gallery');
-const zoomBtn = $<HTMLButtonElement>('#zoom');
 const captureModeRoot = $<HTMLElement>('#capture-mode');
 const recTimer = $<HTMLElement>('#rec-timer');
 const recTime = $<HTMLElement>('#rec-time');
@@ -624,14 +623,12 @@ function setupZoom(): void {
   zoomRange = caps ? hardwareRange(caps) : DIGITAL_ZOOM;
   zoom = clampZoom(1, zoomRange);
   if (renderer) renderer.digitalZoom = 1;
-  updateZoomUi();
-  // Sem WebGL não há zoom digital; só aparece se a câmera tiver zoom próprio.
-  zoomBtn.hidden = usingGallery || (!renderer && !hardwareZoom);
 }
 
 function applyZoom(value: number): void {
   zoom = clampZoom(value, zoomRange);
-  updateZoomUi();
+  // Sem botão de zoom: o nível aparece por um instante no topo enquanto faz a pinça.
+  showNotice(formatZoom(zoom));
   if (hardwareZoom) {
     // Uma mudança por quadro: o gesto de pinça dispara muitos eventos.
     if (zoomPending) return;
@@ -646,14 +643,6 @@ function applyZoom(value: number): void {
   }
 }
 
-function updateZoomUi(): void {
-  const text = formatZoom(zoom);
-  zoomBtn.textContent = text;
-  zoomBtn.classList.toggle('zoomed', Math.abs(zoom - 1) > 0.05);
-  zoomBtn.setAttribute('aria-label', `Zoom da câmera: ${text}. Toque para mudar ou use dois dedos`);
-}
-
-zoomBtn.addEventListener('click', () => applyZoom(nextPreset(zoom, zoomPresets(zoomRange))));
 onPinch(canvas, {
   start: () => zoom,
   change: (value) => {
@@ -672,7 +661,6 @@ function updateSourceUi(): void {
   gallerySaveBtn.hidden = !usingGallery;
   galleryCloseBtn.hidden = !usingGallery;
   switchBtn.hidden = usingGallery || cameraCount < 2;
-  zoomBtn.hidden = usingGallery || (!renderer && !hardwareZoom);
   captureModeRoot.hidden = usingGallery || !renderer || !canRecordVideo();
 }
 

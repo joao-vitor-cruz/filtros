@@ -9,7 +9,7 @@
 | 2 | **Fase 8: app instalável** (aberto nº 1) | Protege os dados no iPhone (sem a limpeza de 7 dias) e é pré-requisito para guardar imagens com segurança (pedidos 4 e 6). Tem um bug difícil (atualização do service worker) e precisa juntar o branch com a galeria. |
 | ~~3~~ | ~~**Vídeo com filtro** (pedido nº 1)~~ | **Feito.** Seletor Foto/Vídeo acima do disparo. |
 | ~~4~~ | ~~**Ajustes estilo Edits + botão de explicação** (pedidos nº 2 e 3)~~ | **Feito.** Painel de ajustes com abas Luz, Cor, HSL, Rodas, Curvas, Estilo e Mais; "?" em cada ajuste. |
-| ~~—~~ | ~~**Zoom da câmera** (pedido nº 8)~~ | **Feito.** Pinça e botão 1×/2×/3×. |
+| ~~—~~ | ~~**Zoom da câmera** (pedido nº 8)~~ | **Feito.** Só pinça com dois dedos (o nível aparece no topo durante o gesto). |
 | 5 | **Editor de paleta mostrando mais a imagem** (pedido nº 5) | Precisa definir o layout antes. Pode ser feito junto com a tarefa 4, que também mexe em painéis. |
 | 6 | **Aba de edição de fotos e vídeos** (pedido nº 4) | Depende do vídeo (3) e dos novos ajustes (4) para valer a pena como aba própria. |
 | 7 | **Foto como ícone da paleta** (pedido nº 6) | Precisa do IndexedDB, do app instalado (2) para não perder as imagens, e de ajustar o formato do exportar (1) para levar as imagens. |
@@ -60,7 +60,7 @@ Ainda não iniciadas. Nenhuma precisa de servidor ou banco de dados online; algu
 | 4 | **Aba de edição de fotos e vídeos já tirados** (como o Edits) | Fotos: já existe a base (galeria + filtros + ajustes); vira uma aba própria. Vídeos: tocar o vídeo pelo renderer e regravar com o filtro — leva o tempo do vídeo, ou usar WebCodecs para ser mais rápido onde houver. Decidir se a aba lista só o que vem da galeria do celular ou também guarda um histórico dentro do app. | Nenhum se abrir da galeria do celular; IndexedDB se o app mantiver um histórico próprio |
 | 5 | **Editor de paleta mostrando mais a câmera/foto** (layout a definir) | Hoje a folha cobre ~75% da tela. Ideias: folha que minimiza para uma barra, ou editor compacto numa faixa horizontal com a câmera em cima. | Nenhum |
 | 6 | **Foto escolhida como ícone da paleta** | No editor, escolher uma foto; recortar em círculo e reduzir (ex.: 128 px) para o carrossel. | IndexedDB (imagem por paleta) |
-| 8 | ~~**Zoom da câmera**~~ **Feito** | Zoom da própria câmera quando o navegador oferece (Android/Chrome, até 10×, incluindo grande-angular); senão zoom digital no shader até 4× (iPhone). Pinça com dois dedos e botão que alterna os níveis. | — |
+| 8 | ~~**Zoom da câmera**~~ **Feito** | Zoom da própria câmera quando o navegador oferece (Android/Chrome, até 10×, incluindo grande-angular); senão zoom digital no shader até 4× (iPhone). Pinça com dois dedos; o nível aparece por um instante no topo (sem botão, a pedido). No computador não há zoom. | — |
 | 7 | ~~**Exportar e importar paletas**~~ | **Feito.** Painel de ajustes → "Minhas paletas": exportar gera `filtros-paletas-AAAAMMDD.json` (no iPhone, pela folha do sistema → "Salvar em Arquivos"); importar junta ao que já existe, ignora paletas iguais (mesmas cores e modo), renumera nomes repetidos ("Praia 2") e recusa arquivos que não são do app. Quando o item 6 existir, o formato precisa levar as imagens dos ícones (subir a versão do arquivo). | — |
 
 ### Sobre armazenamento

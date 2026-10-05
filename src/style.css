@@ -144,34 +144,6 @@ body {
   background: #888;
 }
 
-/* ---------- Zoom ---------- */
-
-.zoom-btn {
-  align-self: center;
-  min-width: 52px;
-  min-height: 36px;
-  padding: 0 12px;
-  border: 1px solid rgb(255 255 255 / 0.35);
-  border-radius: 999px;
-  background: var(--glass);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: var(--fg);
-  font: 600 0.875rem/1 system-ui, sans-serif;
-  font-variant-numeric: tabular-nums;
-  cursor: pointer;
-}
-
-.zoom-btn.zoomed {
-  color: #ffd166;
-  border-color: rgb(255 209 102 / 0.6);
-}
-
-.zoom-btn:focus-visible {
-  outline: 2px solid var(--fg);
-  outline-offset: 2px;
-}
-
 /* ---------- Intensidade ---------- */
 
 .intensity {
