@@ -19,7 +19,7 @@ export function coverScale(
     : [1, videoAspect / targetAspect]; // vídeo mais alto: corta em cima e embaixo
 }
 
-/** Tamanho do canvas em pixels físicos, com a densidade limitada para poupar a GPU. */
+/** Tamanho do canvas em pixels físicos (sempre par), com a densidade limitada para poupar a GPU. */
 export function canvasSize(
   cssWidth: number,
   cssHeight: number,
@@ -27,7 +27,9 @@ export function canvasSize(
   maxDpr = 2,
 ): [number, number] {
   const dpr = Math.min(Math.max(devicePixelRatio, 1), maxDpr);
-  return [Math.max(1, Math.round(cssWidth * dpr)), Math.max(1, Math.round(cssHeight * dpr))];
+  // Sempre par: o codificador de vídeo (H.264) exige largura e altura pares.
+  const even = (v: number) => Math.max(2, Math.round(v / 2) * 2);
+  return [even(cssWidth * dpr), even(cssHeight * dpr)];
 }
 
 export type Rect = { x: number; y: number; width: number; height: number };

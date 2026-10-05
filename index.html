@@ -63,6 +63,10 @@
           <output id="intensity-value" for="intensity">100%</output>
         </label>
         <div class="palette-picker" id="palette-picker"></div>
+        <div class="capture-mode" id="capture-mode" role="radiogroup" aria-label="Modo de captura" hidden>
+          <button type="button" role="radio" aria-checked="true" data-mode="photo">Foto</button>
+          <button type="button" role="radio" aria-checked="false" data-mode="video">Vídeo</button>
+        </div>
         <div class="shutter-row">
           <button class="icon-btn gallery-btn" id="open-gallery" type="button" aria-label="Escolher foto da galeria">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -77,13 +81,22 @@
         <input id="gallery-input" type="file" accept="image/*" hidden />
       </footer>
 
+      <div class="rec-timer" id="rec-timer" role="timer" aria-live="off" hidden>
+        <span class="rec-dot" aria-hidden="true"></span><span id="rec-time">00:00</span>
+      </div>
+
       <div class="flash" id="flash" aria-hidden="true"></div>
 
       <section class="review" id="review" aria-label="Foto tirada" hidden>
         <img class="review-image" id="review-image" alt="Foto tirada com o filtro" />
+        <video class="review-image" id="review-video" playsinline loop muted hidden></video>
         <header class="top-bar review-top">
           <button class="icon-btn" id="review-close" type="button" aria-label="Voltar para a câmera sem salvar">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+          <button class="icon-btn" id="review-sound" type="button" aria-pressed="false" aria-label="Ouvir o som do vídeo" hidden>
+            <svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" /><path d="M17 9l4 6M21 9l-4 6" /></svg>
+            <svg class="sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" /><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /></svg>
           </button>
         </header>
         <footer class="review-actions">

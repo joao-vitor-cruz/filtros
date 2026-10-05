@@ -89,7 +89,8 @@ body {
 .bottom-bar,
 .status,
 .fps,
-.filter-toast {
+.filter-toast,
+.rec-timer {
   z-index: 2;
 }
 
@@ -423,6 +424,99 @@ body {
   to {
     opacity: 0;
   }
+}
+
+/* ---------- Foto / Vídeo ---------- */
+
+.capture-mode {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: -6px;
+}
+
+.capture-mode button {
+  min-height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--fg-muted);
+  font: 600 0.8125rem/1 system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.capture-mode button[aria-checked='true'] {
+  background: var(--glass);
+  color: #ffd166;
+}
+
+.capture-mode button:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 1px;
+}
+
+/* Disparo em modo vídeo: miolo vermelho; gravando, vira um quadrado (parar). */
+.shutter.video::after {
+  background: #ff3b30;
+}
+
+.shutter.recording::after {
+  inset: 20px;
+  border-radius: 8px;
+  background: #ff3b30;
+}
+
+.rec-timer {
+  position: absolute;
+  top: calc(16px + var(--safe-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgb(255 59 48 / 0.9);
+  font: 600 0.9375rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  animation: rec-blink 1s steps(2, start) infinite;
+}
+
+@keyframes rec-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* Durante a gravação, só o que faz sentido mexer continua visível. */
+.app[data-recording] .capture-mode,
+.app[data-recording] .gallery-btn,
+.app[data-recording] #open-settings,
+.app[data-recording] #switch-camera {
+  visibility: hidden;
+}
+
+#review-sound {
+  margin-left: auto;
+}
+
+#review-sound .sound-on,
+#review-sound[aria-pressed='true'] .sound-off {
+  display: none;
+}
+
+#review-sound[aria-pressed='true'] .sound-on {
+  display: block;
 }
 
 /* ---------- Revisão da foto ---------- */
@@ -1157,7 +1251,8 @@ fieldset.field legend {
     transition: none;
   }
   .flash.active,
-  .sheet-body {
+  .sheet-body,
+  .rec-dot {
     animation: none;
   }
 }

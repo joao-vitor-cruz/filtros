@@ -47,7 +47,12 @@ describe('canvasSize', () => {
   });
 
   it('nunca devolve tamanho zero', () => {
-    expect(canvasSize(0, 0, 1)).toEqual([1, 1]);
+    expect(canvasSize(0, 0, 1)).toEqual([2, 2]);
+  });
+
+  it('arredonda para números pares (exigência do vídeo)', () => {
+    expect(canvasSize(391, 845, 1)).toEqual([392, 846]);
+    expect(canvasSize(375, 667, 1.5)).toEqual([562, 1000]);
   });
 });
 

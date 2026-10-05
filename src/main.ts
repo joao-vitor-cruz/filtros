@@ -30,6 +30,7 @@ import { PaletteEditor, type PaletteDraft } from './ui/palette-editor';
 import { SettingsPanel } from './ui/settings';
 import { captureVideoFrame, encodeJpeg, loadImageFile, photoFileName } from './capture/image';
 import { saveFile } from './capture/save';
+import { canRecordVideo, formatDuration, MAX_RECORDING_MS, Recorder, videoExtension } from './capture/recorder';
 import { clampZoom, DIGITAL_ZOOM, formatZoom, hardwareRange, nextPreset, zoomPresets, type ZoomRange } from './zoom';
 import { onPinch } from './ui/pinch';
 import { buildExport, exportFileName, ImportError, mergePalettes, parseImport } from './palette/transfer';
@@ -71,6 +72,11 @@ const gallerySaveBtn = $<HTMLButtonElement>('#gallery-save');
 const galleryCloseBtn = $<HTMLButtonElement>('#gallery-close');
 const errorGalleryBtn = $<HTMLButtonElement>('#error-gallery');
 const zoomBtn = $<HTMLButtonElement>('#zoom');
+const captureModeRoot = $<HTMLElement>('#capture-mode');
+const recTimer = $<HTMLElement>('#rec-timer');
+const recTime = $<HTMLElement>('#rec-time');
+const reviewVideo = $<HTMLVideoElement>('#review-video');
+const reviewSound = $<HTMLButtonElement>('#review-sound');
 
 const camera = new Camera(video);
 let cameraCount = 0;
@@ -359,7 +365,8 @@ async function importPalettes(file: File): Promise<void> {
 
 // ---------- Foto ----------
 
-let photo: { blob: Blob; url: string; name: string } | null = null;
+/** Foto ou vídeo esperando o usuário salvar ou descartar. */
+let photo: { blob: Blob; url: string; name: string; kind: 'image' | 'video' } | null = null;
 let noticeTimer = 0;
 
 function showNotice(text: string): void {
@@ -387,11 +394,7 @@ async function takePhoto(): Promise<void> {
     if (!image) throw new Error('Sem imagem da câmera');
     playFlash();
     const blob = await encodeJpeg(image);
-    photo = { blob, url: URL.createObjectURL(blob), name: photoFileName() };
-    reviewImage.src = photo.url;
-    review.hidden = false;
-    renderer?.stop(); // a câmera fica ligada, mas a GPU descansa enquanto a foto é revisada
-    saveBtn.focus();
+    showReview({ blob, url: URL.createObjectURL(blob), name: photoFileName(), kind: 'image' });
   } catch (err) {
     console.error(err);
     showNotice('Não foi possível tirar a foto');
@@ -400,12 +403,36 @@ async function takePhoto(): Promise<void> {
   }
 }
 
+function showReview(item: NonNullable<typeof photo>, withAudio = false): void {
+  photo = item;
+  const isVideo = item.kind === 'video';
+  reviewImage.hidden = isVideo;
+  reviewVideo.hidden = !isVideo;
+  reviewSound.hidden = !isVideo || !withAudio;
+  review.setAttribute('aria-label', isVideo ? 'Vídeo gravado' : 'Foto tirada');
+  if (isVideo) {
+    // Começa sem som (o navegador só permite tocar sozinho assim); o botão liga o som.
+    reviewVideo.muted = true;
+    reviewSound.setAttribute('aria-pressed', 'false');
+    reviewVideo.src = item.url;
+    reviewVideo.play().catch(() => {});
+  } else {
+    reviewImage.src = item.url;
+  }
+  review.hidden = false;
+  renderer?.stop(); // a câmera fica ligada, mas a GPU descansa durante a revisão
+  saveBtn.focus();
+}
+
 function closeReview(): void {
   if (!photo) return;
   URL.revokeObjectURL(photo.url);
   photo = null;
   review.hidden = true;
   reviewImage.removeAttribute('src');
+  reviewVideo.pause();
+  reviewVideo.removeAttribute('src');
+  reviewVideo.load();
   if (app.dataset.state === 'running') renderer?.start();
   shutterBtn.focus();
 }
@@ -414,10 +441,11 @@ async function saveCurrentPhoto(): Promise<void> {
   if (!photo) return;
   saveBtn.disabled = true;
   try {
+    const { kind } = photo;
     const result = await saveFile(photo.blob, photo.name);
     if (result === 'saved') {
       closeReview();
-      showNotice('Foto salva');
+      showNotice(kind === 'video' ? 'Vídeo salvo' : 'Foto salva');
     }
   } catch (err) {
     console.error(err);
@@ -427,7 +455,82 @@ async function saveCurrentPhoto(): Promise<void> {
   }
 }
 
-shutterBtn.addEventListener('click', takePhoto);
+// ---------- Vídeo ----------
+
+let captureMode: 'photo' | 'video' = 'photo';
+const recorder = new Recorder(canvas);
+let recInterval = 0;
+
+function setCaptureMode(mode: 'photo' | 'video'): void {
+  if (recorder.recording) return;
+  captureMode = mode;
+  for (const button of captureModeRoot.querySelectorAll<HTMLButtonElement>('[data-mode]')) {
+    button.setAttribute('aria-checked', String(button.dataset.mode === mode));
+  }
+  shutterBtn.classList.toggle('video', mode === 'video');
+  shutterBtn.setAttribute('aria-label', mode === 'video' ? 'Começar a gravar' : 'Tirar foto');
+}
+
+async function startRecording(): Promise<void> {
+  if (app.dataset.state !== 'running' || photo || recorder.recording || !renderer) return;
+  shutterBtn.disabled = true;
+  try {
+    const withAudio = await recorder.start();
+    if (!withAudio) showNotice('Gravando sem som (microfone não liberado)');
+    app.dataset.recording = 'true';
+    shutterBtn.classList.add('recording');
+    shutterBtn.setAttribute('aria-label', 'Parar de gravar');
+    recTimer.hidden = false;
+    recTime.textContent = '00:00';
+    recInterval = window.setInterval(() => {
+      recTime.textContent = formatDuration(recorder.elapsed);
+      if (recorder.elapsed >= MAX_RECORDING_MS) stopRecording();
+    }, 250);
+    navigator.vibrate?.(30);
+  } catch (err) {
+    console.error(err);
+    showNotice('Não foi possível gravar vídeo');
+  } finally {
+    shutterBtn.disabled = app.dataset.state !== 'running';
+  }
+}
+
+async function stopRecording(): Promise<void> {
+  if (!recorder.recording) return;
+  clearInterval(recInterval);
+  recTimer.hidden = true;
+  delete app.dataset.recording;
+  shutterBtn.classList.remove('recording');
+  setCaptureMode('video');
+  const result = await recorder.stop();
+  if (!result) {
+    showNotice('O vídeo ficou vazio');
+    return;
+  }
+  const name = photoFileName().replace(/\.jpg$/, `.${videoExtension(result.mimeType)}`);
+  showReview({ blob: result.blob, url: URL.createObjectURL(result.blob), name, kind: 'video' }, result.withAudio);
+}
+
+function onShutter(): void {
+  if (captureMode === 'photo') takePhoto();
+  else if (recorder.recording) stopRecording();
+  else startRecording();
+}
+
+captureModeRoot.addEventListener('click', (e) => {
+  const mode = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-mode]')?.dataset.mode;
+  if (mode === 'photo' || mode === 'video') setCaptureMode(mode);
+});
+reviewSound.addEventListener('click', () => {
+  reviewVideo.muted = !reviewVideo.muted;
+  reviewSound.setAttribute('aria-pressed', String(!reviewVideo.muted));
+  reviewSound.setAttribute('aria-label', reviewVideo.muted ? 'Ouvir o som do vídeo' : 'Tirar o som do vídeo');
+  reviewVideo.play().catch(() => {});
+});
+// Vídeo depende de WebGL (grava o preview filtrado) e de suporte do navegador.
+captureModeRoot.hidden = !renderer || !canRecordVideo();
+
+shutterBtn.addEventListener('click', onShutter);
 saveBtn.addEventListener('click', saveCurrentPhoto);
 reviewClose.addEventListener('click', closeReview);
 document.addEventListener('keydown', (e) => {
@@ -498,6 +601,8 @@ retryBtn.addEventListener('click', () => startCamera());
 // e apaga o indicador de câmera) e religa ao voltar.
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
+    // Para a gravação antes de desligar a câmera; o vídeo até aqui vai para a revisão.
+    if (recorder.recording) stopRecording();
     renderer?.stop();
     camera.cancel();
   } else if (app.dataset.state !== 'error' && !usingGallery) {
@@ -568,6 +673,7 @@ function updateSourceUi(): void {
   galleryCloseBtn.hidden = !usingGallery;
   switchBtn.hidden = usingGallery || cameraCount < 2;
   zoomBtn.hidden = usingGallery || (!renderer && !hardwareZoom);
+  captureModeRoot.hidden = usingGallery || !renderer || !canRecordVideo();
 }
 
 async function openGalleryFile(file: File): Promise<void> {
