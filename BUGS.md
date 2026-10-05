@@ -7,8 +7,9 @@
 | 0 | **Testar no celular** (aberto nº 2) — feito pelo usuário | Não custa desenvolvimento e pode revelar problemas que mudam as prioridades abaixo. Pode rodar em paralelo com a tarefa 1. |
 | ~~1~~ | ~~**Exportar e importar paletas** (pedido nº 7)~~ | **Feito.** Painel de ajustes → "Minhas paletas". |
 | 2 | **Fase 8: app instalável** (aberto nº 1) | Protege os dados no iPhone (sem a limpeza de 7 dias) e é pré-requisito para guardar imagens com segurança (pedidos 4 e 6). Tem um bug difícil (atualização do service worker) e precisa juntar o branch com a galeria. |
-| 3 | **Vídeo com filtro** (pedido nº 1) | Maior ganho para o usuário; independente das demais. É base para a edição de vídeos da tarefa 6. |
-| 4 | **Ajustes estilo Edits + botão de explicação** (pedidos nº 2 e 3) | Fazer juntos: cada ajuste novo já nasce com sua explicação. Aguarda a lista completa de ajustes. |
+| ~~3~~ | ~~**Vídeo com filtro** (pedido nº 1)~~ | **Feito.** Seletor Foto/Vídeo acima do disparo. |
+| ~~4~~ | ~~**Ajustes estilo Edits + botão de explicação** (pedidos nº 2 e 3)~~ | **Feito.** Painel de ajustes com abas Luz, Cor, HSL, Rodas, Curvas, Estilo e Mais; "?" em cada ajuste. |
+| ~~—~~ | ~~**Zoom da câmera** (pedido nº 8)~~ | **Feito.** Pinça e botão 1×/2×/3×. |
 | 5 | **Editor de paleta mostrando mais a imagem** (pedido nº 5) | Precisa definir o layout antes. Pode ser feito junto com a tarefa 4, que também mexe em painéis. |
 | 6 | **Aba de edição de fotos e vídeos** (pedido nº 4) | Depende do vídeo (3) e dos novos ajustes (4) para valer a pena como aba própria. |
 | 7 | **Foto como ícone da paleta** (pedido nº 6) | Precisa do IndexedDB, do app instalado (2) para não perder as imagens, e de ajustar o formato do exportar (1) para levar as imagens. |
@@ -53,12 +54,13 @@ Ainda não iniciadas. Nenhuma precisa de servidor ou banco de dados online; algu
 
 | # | Pedido | O que envolve | Armazenamento |
 |---|--------|---------------|---------------|
-| 1 | **Vídeo com o filtro** | Gravar o canvas filtrado (`canvas.captureStream()` + `MediaRecorder`) junto com o áudio do microfone; botão de gravar ao lado do disparo; salvar como MP4 (iPhone) ou WebM/MP4 (Android). | Nenhum além do salvar atual |
-| 2 | **Mais ajustes na câmera, estilo Instagram Edits** (lista a complementar) | Novas camadas no shader: exposição, realces, sombras, temperatura, matiz, nitidez, desbotado etc. Nitidez e desfoque leem pixels vizinhos (mais pesado que os ajustes atuais; medir o fps). | Preferências, como hoje (`localStorage`) |
-| 3 | **Botão de explicação em cada ajuste** | Ícone "?" ao lado de cada ajuste abrindo um texto curto: o que ele muda na foto e como interage com a paleta/filtro do app (ex.: contraste antes do mapa de cores espalha mais a imagem pelas cores da paleta). | Nenhum (textos fixos no app) |
+| 1 | ~~**Vídeo com o filtro**~~ **Feito** | Gravar o canvas filtrado (`canvas.captureStream()` + `MediaRecorder`) junto com o áudio do microfone; botão de gravar ao lado do disparo; salvar como MP4 (iPhone) ou WebM/MP4 (Android). | Nenhum além do salvar atual |
+| 2 | ~~**Mais ajustes na câmera, estilo Instagram Edits**~~ **Feito**: exposição, brilho, contraste, realces, sombras, brancos, pretos, claridade; temperatura, tonalidade, saturação, vibração; HSL (8 cores × matiz/saturação/luminância); nitidez, redução de ruído, desbotado, vinheta, grão; rodas (global, sombras, meios-tons, realces); curvas (RGB, R, G, B) | Novas camadas no shader: exposição, realces, sombras, temperatura, matiz, nitidez, desbotado etc. Nitidez e desfoque leem pixels vizinhos (mais pesado que os ajustes atuais; medir o fps). | Preferências, como hoje (`localStorage`) |
+| 3 | ~~**Botão de explicação em cada ajuste**~~ **Feito**: cada "?" diz o que o ajuste faz e em que ponto age em relação à paleta | Ícone "?" ao lado de cada ajuste abrindo um texto curto: o que ele muda na foto e como interage com a paleta/filtro do app (ex.: contraste antes do mapa de cores espalha mais a imagem pelas cores da paleta). | Nenhum (textos fixos no app) |
 | 4 | **Aba de edição de fotos e vídeos já tirados** (como o Edits) | Fotos: já existe a base (galeria + filtros + ajustes); vira uma aba própria. Vídeos: tocar o vídeo pelo renderer e regravar com o filtro — leva o tempo do vídeo, ou usar WebCodecs para ser mais rápido onde houver. Decidir se a aba lista só o que vem da galeria do celular ou também guarda um histórico dentro do app. | Nenhum se abrir da galeria do celular; IndexedDB se o app mantiver um histórico próprio |
 | 5 | **Editor de paleta mostrando mais a câmera/foto** (layout a definir) | Hoje a folha cobre ~75% da tela. Ideias: folha que minimiza para uma barra, ou editor compacto numa faixa horizontal com a câmera em cima. | Nenhum |
 | 6 | **Foto escolhida como ícone da paleta** | No editor, escolher uma foto; recortar em círculo e reduzir (ex.: 128 px) para o carrossel. | IndexedDB (imagem por paleta) |
+| 8 | ~~**Zoom da câmera**~~ **Feito** | Zoom da própria câmera quando o navegador oferece (Android/Chrome, até 10×, incluindo grande-angular); senão zoom digital no shader até 4× (iPhone). Pinça com dois dedos e botão que alterna os níveis. | — |
 | 7 | ~~**Exportar e importar paletas**~~ | **Feito.** Painel de ajustes → "Minhas paletas": exportar gera `filtros-paletas-AAAAMMDD.json` (no iPhone, pela folha do sistema → "Salvar em Arquivos"); importar junta ao que já existe, ignora paletas iguais (mesmas cores e modo), renumera nomes repetidos ("Praia 2") e recusa arquivos que não são do app. Quando o item 6 existir, o formato precisa levar as imagens dos ícones (subir a versão do arquivo). | — |
 
 ### Sobre armazenamento
@@ -76,6 +78,10 @@ Ainda não iniciadas. Nenhuma precisa de servidor ou banco de dados online; algu
 - **Paletas, filtro escolhido e ajustes ficam só no navegador.** Limpar os dados do navegador ou trocar de aparelho apaga tudo; para as paletas, use Exportar/Importar como backup.
 - **A foto da câmera mostra um pouco mais que o preview.** A foto usa o quadro inteiro da câmera; o preview corta para preencher a tela.
 - **O grão fica mais fino em fotos grandes da galeria**, porque ele é gerado por pixel da foto.
+- **O vídeo grava o preview**: sai na resolução da tela (ex.: 780×1688 num celular comum), não em 1080p, e na câmera frontal sai espelhado como o preview (a opção "espelhar fotos" vale só para fotos). Até 3 minutos.
+- **Zoom digital (iPhone) amplia a imagem de 1920×1080**: a 4× a foto tem a nitidez de uma imagem de 480×270 ampliada.
+- **Nitidez, redução de ruído e claridade pesam mais na GPU** (leem pixels vizinhos). Em aparelhos fracos, a câmera pode ficar menos fluida com eles ligados; o "?" de cada um avisa.
+- **Os ajustes agora valem também no Original** (antes não valiam), para editar sem paleta.
 
 ## Corrigidos
 

@@ -286,16 +286,16 @@ function deletePalette(): void {
 
 let adjustments = loadAdjustments();
 let mirrorPhotos = loadMirrorPhotos();
-if (renderer) renderer.adjustments = adjustments;
+let saveAdjustmentsTimer = 0;
+renderer?.setAdjustments(adjustments);
 
 const settings = new SettingsPanel(settingsRoot, {
   onAdjust: (value) => {
     adjustments = value;
-    saveAdjustments(value);
-    if (renderer) {
-      renderer.adjustments = value;
-      renderer.draw();
-    }
+    renderer?.setAdjustments(value);
+    // Arrastar um controle gera muitos eventos: salva só quando para de mexer.
+    clearTimeout(saveAdjustmentsTimer);
+    saveAdjustmentsTimer = window.setTimeout(() => saveAdjustments(adjustments), 300);
   },
   onMirrorChange: (value) => {
     mirrorPhotos = value;

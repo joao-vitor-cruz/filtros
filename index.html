@@ -138,31 +138,42 @@
         </form>
       </section>
 
-      <section class="sheet" id="settings" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+      <section class="sheet edit-sheet" id="settings" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
         <div class="sheet-body">
           <header class="sheet-header">
             <h2 id="settings-title" tabindex="-1">Ajustes</h2>
-            <button class="ghost-btn compact" id="settings-reset" type="button">Restaurar</button>
-          </header>
-          <p class="sheet-hint">Valem para todos os filtros, exceto o Original. Toque duas vezes num controle para zerá-lo.</p>
-          <div class="adjust-list" id="settings-sliders"></div>
-          <label class="switch-row">
-            <span>
-              Espelhar fotos da câmera frontal
-              <small>Como aparece na tela, igual a um espelho</small>
-            </span>
-            <input id="settings-mirror" type="checkbox" role="switch" />
-          </label>
-          <section class="palette-transfer" aria-labelledby="transfer-title">
-            <h3 id="transfer-title">Minhas paletas</h3>
-            <p class="sheet-hint" id="transfer-hint"></p>
-            <div class="transfer-actions">
-              <button class="ghost-btn compact" id="export-palettes" type="button">Exportar</button>
-              <button class="ghost-btn compact" id="import-palettes" type="button">Importar</button>
+            <div class="sheet-header-actions">
+              <button class="ghost-btn compact" id="settings-reset" type="button">Restaurar</button>
+              <button class="primary-btn compact" id="settings-done" type="button">Pronto</button>
             </div>
-            <input id="import-input" type="file" accept=".json,application/json" hidden />
-          </section>
-          <button class="primary-btn" id="settings-done" type="button">Pronto</button>
+          </header>
+          <div class="edit-tabs" id="edit-tabs" role="tablist" aria-label="Grupos de ajustes"></div>
+          <div class="edit-panels" id="edit-panels">
+            <div class="edit-panel" id="tab-more" role="tabpanel" hidden>
+              <label class="switch-row">
+                <span>
+                  Espelhar fotos da câmera frontal
+                  <small>Como aparece na tela, igual a um espelho</small>
+                </span>
+                <input id="settings-mirror" type="checkbox" role="switch" />
+              </label>
+              <section class="palette-transfer" aria-labelledby="transfer-title">
+                <h3 id="transfer-title">Minhas paletas</h3>
+                <p class="sheet-hint" id="transfer-hint"></p>
+                <div class="transfer-actions">
+                  <button class="ghost-btn compact" id="export-palettes" type="button">Exportar</button>
+                  <button class="ghost-btn compact" id="import-palettes" type="button">Importar</button>
+                </div>
+                <input id="import-input" type="file" accept=".json,application/json" hidden />
+              </section>
+            </div>
+          </div>
+        </div>
+        <div class="help-card" id="help" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
+          <h3 id="help-title" tabindex="-1"></h3>
+          <p id="help-what"></p>
+          <p class="help-in-app"><strong>Neste app</strong> <span id="help-in-app"></span></p>
+          <button class="primary-btn compact" id="help-close" type="button">Entendi</button>
         </div>
       </section>
 

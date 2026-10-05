@@ -936,22 +936,32 @@ fieldset.field legend {
 }
 
 .adjust-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  column-gap: 12px;
+  display: flex;
+  flex-direction: column;
   font-size: 0.9375rem;
 }
 
-.adjust-row output {
+.adjust-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.adjust-head output {
+  margin-left: auto;
   min-width: 4ch;
   text-align: right;
   color: var(--fg-muted);
   font-variant-numeric: tabular-nums;
 }
 
+.section-head {
+  color: var(--fg-muted);
+  font-size: 0.8125rem;
+}
+
 .adjust-row input {
-  grid-column: 1 / -1;
   width: 100%;
   height: 40px;
   margin: 0;
@@ -1065,6 +1075,253 @@ fieldset.field legend {
 .switch-row input:focus-visible {
   outline: 2px solid var(--fg);
   outline-offset: 2px;
+}
+
+/* ---------- Painel de ajustes (estilo Edits) ---------- */
+
+/* Mais baixo que as outras folhas: a foto continua visível enquanto edita. */
+.edit-sheet {
+  max-height: 56dvh;
+}
+
+.edit-sheet .sheet-body {
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.sheet-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.primary-btn.compact {
+  min-height: 40px;
+  margin: 0;
+  padding: 0 18px;
+  font-size: 0.9375rem;
+}
+
+.edit-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 calc(-16px - var(--safe-right)) 0 calc(-16px - var(--safe-left));
+  padding: 0 calc(16px + var(--safe-right)) 2px calc(16px + var(--safe-left));
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.edit-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.edit-tab {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.08);
+  color: var(--fg-muted);
+  font: 600 0.875rem/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.edit-tab[aria-selected='true'] {
+  background: var(--fg);
+  color: #111;
+}
+
+.edit-tab:focus-visible,
+.chip:focus-visible,
+.help-btn:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
+.edit-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.edit-panel[hidden] {
+  display: none;
+}
+
+.help-btn {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 0.4);
+  border-radius: 50%;
+  background: none;
+  color: var(--fg-muted);
+  font: 700 0.75rem/1 system-ui, sans-serif;
+  cursor: pointer;
+  /* Área de toque maior que o desenho. */
+  position: relative;
+}
+
+.help-btn::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
+.chip-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.chip-row::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-radius: 999px;
+  background: none;
+  color: var(--fg-muted);
+  font: 500 0.8125rem/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.chip[aria-checked='true'] {
+  border-color: var(--fg);
+  color: var(--fg);
+  background: rgb(255 255 255 / 0.1);
+}
+
+/* Ponto amarelo: há ajuste nessa cor, faixa ou canal. */
+.chip.changed::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffd166;
+}
+
+.chip-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.color-wheel-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 6px 0;
+}
+
+.color-wheel {
+  position: relative;
+  width: min(200px, 60vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  /* Matiz pelo ângulo (vermelho no topo, sentido horário); força pela distância do centro. */
+  background:
+    radial-gradient(circle, rgb(128 128 128) 0%, rgb(128 128 128 / 0) 70%),
+    conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.3);
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.color-wheel:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 4px;
+}
+
+.color-wheel-handle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.3);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.5);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.curve-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.curve-editor {
+  width: min(240px, 66vw);
+  aspect-ratio: 1;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.04);
+  touch-action: none;
+}
+
+/* Cartão do "?": por cima do painel, sem tirar a foto da tela. */
+.help-card {
+  position: absolute;
+  left: calc(16px + var(--safe-left));
+  right: calc(16px + var(--safe-right));
+  bottom: calc(16px + var(--safe-bottom));
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 16px;
+  background: #26262a;
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.6);
+  pointer-events: auto;
+}
+
+.help-card h3 {
+  margin: 0;
+  font-size: 1.0625rem;
+}
+
+.help-card h3:focus {
+  outline: none;
+}
+
+.help-card p {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.help-card .help-in-app strong {
+  display: block;
+  margin-bottom: 2px;
+  color: #ffd166;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.help-card .primary-btn {
+  align-self: flex-end;
 }
 
 /* ---------- Exportar e importar paletas ---------- */

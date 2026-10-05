@@ -2,7 +2,10 @@ import vertexSource from './quad.vert.glsl?raw';
 import fragmentSource from './filter.frag.glsl?raw';
 import { canvasSize, containRect, coverScale, type Rect } from './cover';
 import { buildGradient, GRADIENT_SIZE, MAX_COLORS, parseHex } from '../palette/palette';
-import { DEFAULT_ADJUSTMENTS, MODE_INDEX, type Adjustments, type FilterMode } from '../filter';
+import { MODE_INDEX, type FilterMode } from '../filter';
+import { defaultAdjustments, type Adjustments } from '../edit/adjustments';
+import { packAdjustments, type PackedAdjustments } from '../edit/uniforms';
+import { buildCurveLut, CURVE_LUT_SIZE } from '../edit/curves';
 import { flipRows } from '../capture/image';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
@@ -12,6 +15,7 @@ type Program = {
   buffer: WebGLBuffer;
   texture: WebGLTexture;
   paletteTexture: WebGLTexture;
+  curveTexture: WebGLTexture;
   aPosition: number;
   uniforms: Record<(typeof UNIFORMS)[number], WebGLUniformLocation | null>;
 };
@@ -19,15 +23,16 @@ type Program = {
 const UNIFORMS = [
   'uCoverScale',
   'uMirror',
-  'uIntensity',
   'uColors',
-  'uColorCount',
-  'uMode',
-  'uContrast',
-  'uSaturation',
-  'uVignette',
-  'uGrain',
-  'uSeed',
+  'uMisc',
+  'uLight1',
+  'uLight2',
+  'uColorAdj',
+  'uStyle',
+  'uFlags',
+  'uTexel',
+  'uHsl',
+  'uWheels',
 ] as const;
 
 /** Foto fixa (da galeria) já decodificada, com a orientação corrigida. */
@@ -56,8 +61,8 @@ export class Renderer {
   /** Zoom digital da câmera (1 = sem zoom): amplia o centro do quadro, no preview e na foto. */
   digitalZoom = 1;
 
-  /** Ajustes base e efeitos (contraste, saturação, vinheta, grão). */
-  adjustments: Adjustments = { ...DEFAULT_ADJUSTMENTS };
+  private packed: PackedAdjustments = packAdjustments(defaultAdjustments());
+  private curveLut: Uint8Array = buildCurveLut(defaultAdjustments().curves);
 
   private palette: Uint8Array = buildGradient(['#000000', '#ffffff']);
   private colors = new Float32Array(MAX_COLORS * 3);
@@ -151,6 +156,14 @@ export class Renderer {
   /** Volta a usar a câmera como fonte. O loop recomeça com start(). */
   useCamera(): void {
     this.source = { kind: 'video' };
+  }
+
+  /** Troca os ajustes de edição (luz, cor, HSL, rodas, curvas, estilo). */
+  setAdjustments(adjustments: Adjustments): void {
+    this.packed = packAdjustments(adjustments);
+    this.curveLut = buildCurveLut(adjustments.curves);
+    this.uploadCurves();
+    this.draw();
   }
 
   start(): void {
@@ -266,20 +279,22 @@ export class Renderer {
     }
 
     const u = res.uniforms;
-    const { contrast, saturation, vignette, grain } = this.adjustments;
+    const p = this.packed;
+    const [sourceWidth, sourceHeight] = this.sourceSize();
     this.seed = (this.seed + 1) % 97;
     gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
     gl.uniform2f(u.uCoverScale, sx, sy);
     gl.uniform1f(u.uMirror, mirrored ? 1 : 0);
-    gl.uniform1f(u.uIntensity, this.intensity);
     gl.uniform3fv(u.uColors, this.colors);
-    gl.uniform1f(u.uColorCount, this.colorCount);
-    gl.uniform1f(u.uMode, MODE_INDEX[this.mode]);
-    gl.uniform1f(u.uContrast, contrast);
-    gl.uniform1f(u.uSaturation, saturation);
-    gl.uniform1f(u.uVignette, vignette);
-    gl.uniform1f(u.uGrain, grain);
-    gl.uniform1f(u.uSeed, this.seed * 13.37);
+    gl.uniform4f(u.uMisc, this.colorCount, MODE_INDEX[this.mode], this.intensity, this.seed * 13.37);
+    gl.uniform4fv(u.uLight1, p.light1);
+    gl.uniform4fv(u.uLight2, p.light2);
+    gl.uniform4fv(u.uColorAdj, p.color);
+    gl.uniform4fv(u.uStyle, p.style);
+    gl.uniform4fv(u.uFlags, p.flags);
+    gl.uniform4f(u.uTexel, 1 / Math.max(sourceWidth, 1), 1 / Math.max(sourceHeight, 1), p.grain, 0);
+    gl.uniform3fv(u.uHsl, p.hsl);
+    gl.uniform4fv(u.uWheels, p.wheels);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     return true;
   }
@@ -291,6 +306,7 @@ export class Renderer {
     if (res && !gl.isContextLost()) {
       gl.deleteTexture(res.texture);
       gl.deleteTexture(res.paletteTexture);
+      gl.deleteTexture(res.curveTexture);
       gl.deleteBuffer(res.buffer);
       gl.deleteProgram(res.program);
     }
@@ -339,21 +355,34 @@ export class Renderer {
 
     // Unidade 1: paleta. Unidade 0 (vídeo) fica ativa, pois é reenviada a cada frame.
     const paletteTexture = createTexture(gl, 1);
+    const curveTexture = createTexture(gl, 3);
     const texture = createTexture(gl, 0);
 
     gl.uniform1i(gl.getUniformLocation(program, 'uVideo'), 0);
     gl.uniform1i(gl.getUniformLocation(program, 'uPalette'), 1);
+    gl.uniform1i(gl.getUniformLocation(program, 'uCurves'), 3);
 
     this.res = {
       program,
       buffer,
       texture,
       paletteTexture,
+      curveTexture,
       aPosition,
       uniforms: Object.fromEntries(UNIFORMS.map((name) => [name, gl.getUniformLocation(program, name)])) as Program['uniforms'],
     };
     this.uploadPalette();
+    this.uploadCurves();
     return this.res;
+  }
+
+  private uploadCurves(): void {
+    const { gl, res } = this;
+    if (!res || gl.isContextLost()) return;
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, res.curveTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, CURVE_LUT_SIZE, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, this.curveLut);
+    gl.activeTexture(gl.TEXTURE0);
   }
 
   private uploadPalette(): void {

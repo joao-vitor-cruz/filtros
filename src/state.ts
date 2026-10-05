@@ -1,5 +1,5 @@
 import type { Palette } from './palette/palette';
-import { parseAdjustments, type Adjustments } from './filter';
+import { parseAdjustments, type Adjustments } from './edit/adjustments';
 import { PRESETS } from './palette/presets';
 
 /** "Original" (sem filtro) seguido das paletas disponíveis. */
