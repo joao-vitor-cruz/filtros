@@ -30,6 +30,8 @@ import { PaletteEditor, type PaletteDraft } from './ui/palette-editor';
 import { SettingsPanel } from './ui/settings';
 import { captureVideoFrame, encodeJpeg, loadImageFile, photoFileName } from './capture/image';
 import { saveFile } from './capture/save';
+import { clampZoom, DIGITAL_ZOOM, formatZoom, hardwareRange, nextPreset, zoomPresets, type ZoomRange } from './zoom';
+import { onPinch } from './ui/pinch';
 import { buildExport, exportFileName, ImportError, mergePalettes, parseImport } from './palette/transfer';
 
 type AppState = 'loading' | 'running' | 'error';
@@ -68,6 +70,7 @@ const galleryInput = $<HTMLInputElement>('#gallery-input');
 const gallerySaveBtn = $<HTMLButtonElement>('#gallery-save');
 const galleryCloseBtn = $<HTMLButtonElement>('#gallery-close');
 const errorGalleryBtn = $<HTMLButtonElement>('#error-gallery');
+const zoomBtn = $<HTMLButtonElement>('#zoom');
 
 const camera = new Camera(video);
 let cameraCount = 0;
@@ -475,6 +478,7 @@ async function startCamera(facing = camera.facing): Promise<void> {
     cameraCount = await countVideoInputs();
     switchBtn.hidden = cameraCount < 2;
     updateMirror();
+    setupZoom();
     if (!photo) renderer?.start();
     setState('running');
   } catch (err) {
@@ -501,6 +505,57 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+// ---------- Zoom ----------
+
+let zoom = 1;
+let zoomRange: ZoomRange = DIGITAL_ZOOM;
+let hardwareZoom = false;
+let zoomPending = false;
+
+/** Ao abrir uma câmera: usa o zoom dela se existir; senão, zoom digital no shader. */
+function setupZoom(): void {
+  const caps = camera.hardwareZoom();
+  hardwareZoom = !!caps;
+  zoomRange = caps ? hardwareRange(caps) : DIGITAL_ZOOM;
+  zoom = clampZoom(1, zoomRange);
+  if (renderer) renderer.digitalZoom = 1;
+  updateZoomUi();
+  // Sem WebGL não há zoom digital; só aparece se a câmera tiver zoom próprio.
+  zoomBtn.hidden = usingGallery || (!renderer && !hardwareZoom);
+}
+
+function applyZoom(value: number): void {
+  zoom = clampZoom(value, zoomRange);
+  updateZoomUi();
+  if (hardwareZoom) {
+    // Uma mudança por quadro: o gesto de pinça dispara muitos eventos.
+    if (zoomPending) return;
+    zoomPending = true;
+    requestAnimationFrame(() => {
+      zoomPending = false;
+      camera.setHardwareZoom(zoom).catch((err) => console.warn('Zoom da câmera falhou', err));
+    });
+  } else if (renderer) {
+    renderer.digitalZoom = zoom;
+    renderer.draw();
+  }
+}
+
+function updateZoomUi(): void {
+  const text = formatZoom(zoom);
+  zoomBtn.textContent = text;
+  zoomBtn.classList.toggle('zoomed', Math.abs(zoom - 1) > 0.05);
+  zoomBtn.setAttribute('aria-label', `Zoom da câmera: ${text}. Toque para mudar ou use dois dedos`);
+}
+
+zoomBtn.addEventListener('click', () => applyZoom(nextPreset(zoom, zoomPresets(zoomRange))));
+onPinch(canvas, {
+  start: () => zoom,
+  change: (value) => {
+    if (!usingGallery && app.dataset.state === 'running') applyZoom(value);
+  },
+});
+
 // ---------- Foto da galeria ----------
 
 /** true enquanto o preview mostra uma foto da galeria em vez da câmera. */
@@ -512,6 +567,7 @@ function updateSourceUi(): void {
   gallerySaveBtn.hidden = !usingGallery;
   galleryCloseBtn.hidden = !usingGallery;
   switchBtn.hidden = usingGallery || cameraCount < 2;
+  zoomBtn.hidden = usingGallery || (!renderer && !hardwareZoom);
 }
 
 async function openGalleryFile(file: File): Promise<void> {

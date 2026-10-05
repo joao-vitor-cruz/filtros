@@ -134,6 +134,21 @@ export class Camera {
     this.video.srcObject = null;
   }
 
+  /** Intervalo do zoom da própria câmera, ou null se ela não oferece (ex.: Safari). */
+  hardwareZoom(): { min: number; max: number } | null {
+    const track = this.stream?.getVideoTracks()[0];
+    const caps = track?.getCapabilities?.() as { zoom?: { min: number; max: number } } | undefined;
+    if (!caps?.zoom || !(caps.zoom.max > caps.zoom.min)) return null;
+    return { min: caps.zoom.min, max: caps.zoom.max };
+  }
+
+  async setHardwareZoom(zoom: number): Promise<void> {
+    const track = this.stream?.getVideoTracks()[0];
+    if (!track) return;
+    // "zoom" ainda não está nos tipos padrão do TypeScript.
+    await track.applyConstraints({ advanced: [{ zoom } as MediaTrackConstraintSet] });
+  }
+
   /** Invalida qualquer start() pendente e desliga a câmera. */
   cancel(): void {
     this.request++;

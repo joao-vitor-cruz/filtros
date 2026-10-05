@@ -9,7 +9,11 @@ export function onHorizontalSwipe(target: HTMLElement, handler: (direction: 1 | 
   let start: { x: number; y: number; t: number; id: number } | null = null;
 
   target.addEventListener('pointerdown', (e) => {
-    if (!e.isPrimary) return;
+    // Um segundo dedo é pinça (zoom), não deslize: cancela.
+    if (!e.isPrimary) {
+      start = null;
+      return;
+    }
     start = { x: e.clientX, y: e.clientY, t: e.timeStamp, id: e.pointerId };
   });
 

@@ -53,6 +53,8 @@ export class Renderer {
   mirrored = false;
   /** 0 = imagem original, 1 = filtro completo. */
   intensity = 1;
+  /** Zoom digital da câmera (1 = sem zoom): amplia o centro do quadro, no preview e na foto. */
+  digitalZoom = 1;
 
   /** Ajustes base e efeitos (contraste, saturação, vinheta, grão). */
   adjustments: Adjustments = { ...DEFAULT_ADJUSTMENTS };
@@ -176,7 +178,8 @@ export class Renderer {
       const [iw, ih] = this.sourceSize();
       return this.render(width, height, containRect(iw, ih, width, height), [1, 1], false);
     }
-    return this.render(width, height, full, coverScale(this.video.videoWidth, this.video.videoHeight, width, height));
+    const [sx, sy] = coverScale(this.video.videoWidth, this.video.videoHeight, width, height);
+    return this.render(width, height, full, [sx / this.digitalZoom, sy / this.digitalZoom]);
   }
 
   /**
@@ -204,7 +207,9 @@ export class Renderer {
 
     try {
       if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) return null;
-      if (!this.render(width, height, { x: 0, y: 0, width, height }, [1, 1], mirror)) return null;
+      // Com zoom digital, a foto é o centro ampliado do quadro (como no preview).
+      const zoom = this.source.kind === 'video' ? 1 / this.digitalZoom : 1;
+      if (!this.render(width, height, { x: 0, y: 0, width, height }, [zoom, zoom], mirror)) return null;
       const pixels = new Uint8Array(width * height * 4);
       gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
       // O WebGL lê de baixo para cima; a imagem começa pela linha de cima.
