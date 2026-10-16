@@ -23,6 +23,7 @@ const INTENSITY_KEY = 'filtros:intensidade';
 const ADJUSTMENTS_KEY = 'filtros:ajustes';
 const MIRROR_KEY = 'filtros:espelhar-fotos';
 const DRAWER_HINT_KEY = 'filtros:dica-gaveta';
+const SETTINGS_HINT_KEY = 'filtros:dica-ajustes';
 
 function read(key: string): string | null {
   try {
@@ -65,3 +66,7 @@ export const saveMirrorPhotos = (value: boolean): void => write(MIRROR_KEY, Stri
 /** A dica do toque duplo aparece só na primeira vez. */
 export const loadDrawerHintSeen = (): boolean => read(DRAWER_HINT_KEY) === 'true';
 export const saveDrawerHintSeen = (): void => write(DRAWER_HINT_KEY, 'true');
+
+/** A dica dos gestos na câmera durante os ajustes, também só na primeira vez. */
+export const loadSettingsHintSeen = (): boolean => read(SETTINGS_HINT_KEY) === 'true';
+export const saveSettingsHintSeen = (): void => write(SETTINGS_HINT_KEY, 'true');

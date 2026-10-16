@@ -49,6 +49,8 @@ type SliderRow = { element: HTMLElement; set: (value: number) => void };
 
 /** Duração da descida do painel ao fechar (igual à animação `sheet-down` do CSS). */
 const CLOSE_MS = 320;
+/** Quanto é preciso arrastar as abas para baixo para fechar o painel. */
+const SWIPE_CLOSE_PX = 70;
 
 /**
  * Painel de ajustes no estilo do Instagram Edits: abas Luz, Cor, HSL, Rodas,
@@ -73,6 +75,8 @@ export class SettingsPanel {
   private curveChannel: CurveChannel = 'rgb';
   private hslField: 'hue' | 'saturation' | 'luminance' = 'hue';
   private closeTimer = 0;
+  private currentTab: TabId = 'light';
+  private readonly body: HTMLElement;
 
   constructor(
     private readonly root: HTMLElement,
@@ -85,6 +89,8 @@ export class SettingsPanel {
     this.exportBtn = $<HTMLButtonElement>('#export-palettes');
     this.transferHint = $('#transfer-hint');
     this.help = $('#help');
+    this.body = $('.sheet-body');
+    this.enableSwipeDown();
 
     this.buildTabs($('#edit-tabs'), $('#edit-panels'));
 
@@ -123,6 +129,7 @@ export class SettingsPanel {
     this.refresh();
     clearTimeout(this.closeTimer);
     this.root.classList.remove('closing');
+    this.body.style.transform = '';
     this.root.hidden = false;
     this.title.focus({ preventScroll: true });
   }
@@ -140,7 +147,75 @@ export class SettingsPanel {
     this.closeTimer = window.setTimeout(() => {
       this.root.hidden = true;
       this.root.classList.remove('closing');
+      this.body.style.transform = '';
     }, CLOSE_MS);
+  }
+
+  /**
+   * O controle deslizante visível na aba atual (o ajuste escolhido), para a
+   * câmera poder ajustá-lo com um arraste. Null em Curvas e Mais.
+   */
+  activeRange(): HTMLInputElement | null {
+    if (this.root.hidden) return null;
+    return (
+      this.panels.get(this.currentTab)?.querySelector<HTMLInputElement>('.adjust-row:not([hidden]) input[type="range"]') ??
+      null
+    );
+  }
+
+  /**
+   * Arrastar as abas (ou uma fileira de opções) para baixo fecha o painel.
+   * Essas faixas só rolam na horizontal (touch-action: pan-x no CSS), então o
+   * movimento vertical chega aqui sem o navegador rolar a página.
+   */
+  private enableSwipeDown(): void {
+    const body = this.body;
+    let start: { x: number; y: number; id: number } | null = null;
+    let dragging = false;
+    let swallowClick = false;
+    body.addEventListener('pointerdown', (e) => {
+      swallowClick = false;
+      start = (e.target as Element).closest('.edit-bar, .chip-row') ? { x: e.clientX, y: e.clientY, id: e.pointerId } : null;
+    });
+    body.addEventListener('pointermove', (e) => {
+      if (!start || e.pointerId !== start.id) return;
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      if (!dragging) {
+        if (dy > 10 && dy > Math.abs(dx) * 1.2) {
+          dragging = true;
+          body.setPointerCapture(e.pointerId);
+          body.classList.add('dragging');
+        } else if (Math.abs(dx) > 10) {
+          start = null; // é rolagem horizontal das abas
+          return;
+        } else return;
+      }
+      body.style.transform = `translateY(${Math.max(0, dy)}px)`;
+    });
+    const end = (e: PointerEvent, cancelled: boolean) => {
+      if (!start || e.pointerId !== start.id) return;
+      const dy = e.clientY - start.y;
+      start = null;
+      if (!dragging) return;
+      dragging = false;
+      swallowClick = true; // o soltar não deve virar toque numa aba
+      body.classList.remove('dragging');
+      if (!cancelled && dy > SWIPE_CLOSE_PX) this.callbacks.onClose();
+      else body.style.transform = '';
+    };
+    body.addEventListener('pointerup', (e) => end(e, false));
+    body.addEventListener('pointercancel', (e) => end(e, true));
+    body.addEventListener(
+      'click',
+      (e) => {
+        if (!swallowClick) return;
+        swallowClick = false;
+        e.stopPropagation();
+        e.preventDefault();
+      },
+      true,
+    );
   }
 
   /** Atualiza o texto e o botão de exportar conforme quantas paletas o usuário criou. */
@@ -187,6 +262,7 @@ export class SettingsPanel {
   }
 
   private showTab(id: TabId): void {
+    this.currentTab = id;
     for (const [tab, button] of this.tabButtons) {
       const selected = tab === id;
       button.setAttribute('aria-selected', String(selected));
@@ -245,7 +321,6 @@ export class SettingsPanel {
   // ---------- HSL ----------
 
   private buildHsl(panel: HTMLElement): void {
-    panel.append(this.sectionHeader('Escolha a cor', 'hsl'));
     const chips = this.chips(
       HSL_COLORS.map((c) => ({ id: c, label: HSL_LABELS[c], color: `hsl(${HSL_HUES[c]} 90% 55%)` })),
       'Cor do HSL',
@@ -253,6 +328,7 @@ export class SettingsPanel {
         this.hslColor = c;
         this.refresh();
       },
+      'hsl',
     );
     panel.append(chips.element);
     const fields = [
@@ -298,7 +374,6 @@ export class SettingsPanel {
   // ---------- Rodas ----------
 
   private buildWheels(panel: HTMLElement): void {
-    panel.append(this.sectionHeader('Escolha a faixa', 'wheels'));
     const chips = this.chips(
       WHEELS.map((w) => ({ id: w, label: WHEEL_LABELS[w] })),
       'Roda de cor',
@@ -306,6 +381,7 @@ export class SettingsPanel {
         this.wheel = w;
         this.refresh();
       },
+      'wheels',
     );
     panel.append(chips.element);
     const wheel = new ColorWheel((hue, amount) => {
@@ -339,7 +415,6 @@ export class SettingsPanel {
   // ---------- Curvas ----------
 
   private buildCurves(panel: HTMLElement): void {
-    panel.append(this.sectionHeader('Canal', 'curves'));
     const chips = this.chips(
       CURVE_CHANNELS.map((c) => ({ id: c, label: CURVE_LABELS[c], color: c === 'rgb' ? undefined : CURVE_COLORS[c] })),
       'Canal da curva',
@@ -347,6 +422,7 @@ export class SettingsPanel {
         this.curveChannel = c;
         this.refresh();
       },
+      'curves',
     );
     panel.append(chips.element);
     const editor = new CurveEditor((points) => {
@@ -357,7 +433,8 @@ export class SettingsPanel {
     const resetCurve = document.createElement('button');
     resetCurve.type = 'button';
     resetCurve.className = 'ghost-btn compact';
-    resetCurve.textContent = 'Redefinir esta curva';
+    resetCurve.textContent = 'Redefinir';
+    resetCurve.setAttribute('aria-label', 'Redefinir esta curva');
     resetCurve.addEventListener('click', () => {
       this.values.curves[this.curveChannel] = [
         [0, 0],
@@ -423,19 +500,12 @@ export class SettingsPanel {
     return { element: row, set: show };
   }
 
-  private sectionHeader(text: string, helpKey: HelpKey): HTMLElement {
-    const head = document.createElement('div');
-    head.className = 'adjust-head section-head';
-    const label = document.createElement('span');
-    label.textContent = text;
-    head.append(label, this.helpButton(helpKey));
-    return head;
-  }
-
+  /** Fileira de opções. Com `helpKey`, ganha um "?" fixo na ponta (no lugar de um título de seção). */
   private chips<T extends string>(
     items: { id: T; label: string; color?: string }[],
     groupLabel: string,
     onSelect: (id: T) => void,
+    helpKey?: HelpKey,
   ): { element: HTMLElement; select: (id: T, changed: (id: T) => boolean) => void } {
     const group = document.createElement('div');
     group.className = 'chip-row';
@@ -461,8 +531,14 @@ export class SettingsPanel {
       group.append(b);
       return b;
     });
+    let element: HTMLElement = group;
+    if (helpKey) {
+      element = document.createElement('div');
+      element.className = 'chip-bar';
+      element.append(group, this.helpButton(helpKey));
+    }
     return {
-      element: group,
+      element,
       select: (id, changed) => {
         for (const b of buttons) {
           const selected = b.dataset.id === id;

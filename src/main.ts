@@ -9,11 +9,13 @@ import {
   loadIntensity,
   loadMirrorPhotos,
   loadSelectedId,
+  loadSettingsHintSeen,
   saveAdjustments,
   saveDrawerHintSeen,
   saveIntensity,
   saveMirrorPhotos,
   saveSelectedId,
+  saveSettingsHintSeen,
   wrapIndex,
 } from './state';
 import { isValidPalette, type Palette } from './palette/palette';
@@ -31,6 +33,7 @@ import { createTapClassifier } from './ui/double-tap';
 import { PalettePicker } from './ui/palette-picker';
 import { iconBackground, PaletteEditor, type PaletteDraft } from './ui/palette-editor';
 import { SettingsPanel } from './ui/settings';
+import { defaultAdjustments } from './edit/adjustments';
 import { captureVideoFrame, encodeJpeg, loadImageFile, photoFileName } from './capture/image';
 import { saveFile } from './capture/save';
 import { canRecordVideo, formatDuration, MAX_RECORDING_MS, Recorder, videoExtension } from './capture/recorder';
@@ -385,12 +388,15 @@ const settings = new SettingsPanel(settingsRoot, {
   },
   onExport: exportPalettes,
   onImport: importPalettes,
-  onClose: () => {
-    settings.close();
-    delete app.dataset.sheet;
-    settingsBtn.focus();
-  },
+  onClose: closeSettings,
 });
+
+function closeSettings(): void {
+  if (app.dataset.sheet !== 'settings') return;
+  settings.close();
+  delete app.dataset.sheet;
+  settingsBtn.focus();
+}
 
 settingsBtn.addEventListener('click', () => {
   if (photo || app.dataset.sheet) return;
@@ -398,6 +404,101 @@ settingsBtn.addEventListener('click', () => {
   setPalettesOpen(false);
   settings.open(adjustments, mirrorPhotos, customPalettes.length);
   fitPreviewAboveSheet();
+  if (!loadSettingsHintSeen()) {
+    showNotice('Arraste na imagem para ajustar. Segure para comparar. Toque para fechar.', 4500);
+    saveSettingsHintSeen();
+  }
+});
+
+// ---------- Gestos na câmera com os ajustes abertos ----------
+// A imagem vira o controle: arrastar na horizontal ajusta o valor escolhido
+// (área de toque muito maior que a barra), segurar mostra sem os ajustes
+// para comparar, e um toque fecha o painel.
+
+const DRAG_START_PX = 8;
+const HOLD_MS = 280;
+
+let previewGesture: {
+  id: number;
+  x: number;
+  y: number;
+  mode: 'pending' | 'drag' | 'hold';
+  input: HTMLInputElement | null;
+  startValue: number;
+  timer: number;
+} | null = null;
+
+function setComparing(on: boolean): void {
+  renderer?.setAdjustments(on ? defaultAdjustments() : adjustments);
+  if (on) showNotice('Sem ajustes', 0);
+  else hideNotice();
+}
+
+function endPreviewGesture(tap: boolean): void {
+  const g = previewGesture;
+  if (!g) return;
+  previewGesture = null;
+  clearTimeout(g.timer);
+  if (g.mode === 'hold') setComparing(false);
+  else if (g.mode === 'pending' && tap) closeSettings();
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (app.dataset.sheet !== 'settings') return;
+  // Segundo dedo é pinça (zoom): cancela o gesto em andamento.
+  if (!e.isPrimary) {
+    endPreviewGesture(false);
+    return;
+  }
+  const input = settings.activeRange();
+  previewGesture = {
+    id: e.pointerId,
+    x: e.clientX,
+    y: e.clientY,
+    mode: 'pending',
+    input,
+    startValue: input ? Number(input.value) : 0,
+    timer: window.setTimeout(() => {
+      if (previewGesture?.mode !== 'pending') return;
+      previewGesture.mode = 'hold';
+      setComparing(true);
+    }, HOLD_MS),
+  };
+});
+
+canvas.addEventListener('pointermove', (e) => {
+  const g = previewGesture;
+  if (!g || e.pointerId !== g.id) return;
+  const dx = e.clientX - g.x;
+  const dy = e.clientY - g.y;
+  if (g.mode === 'pending') {
+    if (Math.hypot(dx, dy) < DRAG_START_PX) return;
+    clearTimeout(g.timer);
+    // Arraste vertical (ou sem ajuste para mexer) não faz nada e não fecha.
+    if (!g.input || Math.abs(dx) < Math.abs(dy)) {
+      g.mode = 'drag';
+      g.input = null;
+      return;
+    }
+    g.mode = 'drag';
+  }
+  if (g.mode !== 'drag' || !g.input) return;
+  // A largura da imagem na tela percorre a faixa inteira do ajuste.
+  const { input } = g;
+  const min = Number(input.min);
+  const max = Number(input.max);
+  const width = canvas.getBoundingClientRect().width;
+  const value = Math.round(Math.min(max, Math.max(min, g.startValue + (dx / width) * (max - min))));
+  if (String(value) === input.value) return;
+  input.value = String(value);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+});
+
+canvas.addEventListener('pointerup', (e) => {
+  if (previewGesture?.id === e.pointerId) endPreviewGesture(true);
+});
+canvas.addEventListener('pointercancel', (e) => {
+  if (previewGesture?.id === e.pointerId) endPreviewGesture(false);
 });
 
 // Com os ajustes abertos, a câmera encolhe para caber inteira acima do painel.
@@ -473,11 +574,17 @@ async function importPalettes(file: File): Promise<void> {
 let photo: { blob: Blob; url: string; name: string; kind: 'image' | 'video' } | null = null;
 let noticeTimer = 0;
 
-function showNotice(text: string): void {
+/** `ms`: quanto tempo fica na tela; 0 deixa até `hideNotice()`. */
+function showNotice(text: string, ms = 2000): void {
   notice.textContent = text;
   notice.classList.add('visible');
   clearTimeout(noticeTimer);
-  noticeTimer = window.setTimeout(() => notice.classList.remove('visible'), 2000);
+  if (ms > 0) noticeTimer = window.setTimeout(hideNotice, ms);
+}
+
+function hideNotice(): void {
+  clearTimeout(noticeTimer);
+  notice.classList.remove('visible');
 }
 
 function playFlash(): void {

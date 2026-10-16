@@ -145,16 +145,22 @@
 
       <section class="sheet edit-sheet" id="settings" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
         <div class="sheet-body">
-          <header class="sheet-header">
-            <h2 id="settings-title" tabindex="-1">Ajustes</h2>
-            <div class="sheet-header-actions">
-              <button class="ghost-btn compact" id="settings-reset" type="button">Restaurar</button>
-              <button class="primary-btn compact" id="settings-done" type="button">Pronto</button>
-            </div>
-          </header>
-          <div class="edit-tabs" id="edit-tabs" role="tablist" aria-label="Grupos de ajustes"></div>
+          <!-- Sem cabeçalho: as abas ficam no topo, com o OK na ponta. Arrastar esta
+               faixa para baixo também fecha. O título só existe para leitores de tela. -->
+          <h2 class="visually-hidden" id="settings-title" tabindex="-1">Ajustes</h2>
+          <div class="edit-bar">
+            <div class="edit-tabs" id="edit-tabs" role="tablist" aria-label="Grupos de ajustes"></div>
+            <button class="text-btn edit-done" id="settings-done" type="button" aria-label="Pronto">OK</button>
+          </div>
           <div class="edit-panels" id="edit-panels">
             <div class="edit-panel" id="tab-more" role="tabpanel" hidden>
+              <div class="switch-row">
+                <span>
+                  Restaurar todos os ajustes
+                  <small>Para zerar um só, toque duas vezes no controle dele</small>
+                </span>
+                <button class="ghost-btn compact" id="settings-reset" type="button">Restaurar</button>
+              </div>
               <label class="switch-row">
                 <span>
                   Espelhar fotos da câmera frontal
