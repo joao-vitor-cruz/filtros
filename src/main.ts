@@ -5,10 +5,12 @@ import { FpsMeter } from './fps';
 import {
   filterOptions,
   loadAdjustments,
+  loadDrawerHintSeen,
   loadIntensity,
   loadMirrorPhotos,
   loadSelectedId,
   saveAdjustments,
+  saveDrawerHintSeen,
   saveIntensity,
   saveMirrorPhotos,
   saveSelectedId,
@@ -25,6 +27,7 @@ import {
   suggestName,
 } from './palette/storage';
 import { onHorizontalSwipe } from './ui/swipe';
+import { createTapClassifier } from './ui/double-tap';
 import { PalettePicker } from './ui/palette-picker';
 import { iconBackground, PaletteEditor, type PaletteDraft } from './ui/palette-editor';
 import { SettingsPanel } from './ui/settings';
@@ -54,6 +57,7 @@ const toast = $<HTMLElement>('#filter-toast');
 const toastSwatch = $<HTMLElement>('#filter-swatch');
 const toastName = $<HTMLElement>('#filter-name');
 const pickerRoot = $<HTMLElement>('#palette-picker');
+const drawer = $<HTMLElement>('#palette-drawer');
 const intensityRow = $<HTMLElement>('#intensity-row');
 const intensityInput = $<HTMLInputElement>('#intensity');
 const intensityValue = $<HTMLOutputElement>('#intensity-value');
@@ -116,7 +120,10 @@ let intensity = loadIntensity();
 let toastTimer = 0;
 
 const picker = new PalettePicker(pickerRoot, options, {
-  onSelect: (index) => selectFilter(index, false),
+  onSelect: (index) => {
+    selectFilter(index, false);
+    collapsePalettesSoon();
+  },
   onEdit: (index) => openEditor(index),
   onCreate: () => openEditor(null),
 });
@@ -197,6 +204,74 @@ if (renderer) {
   intensityRow.hidden = true;
 }
 
+// ---------- Gaveta de filtros ----------
+// Na câmera, as paletas ficam recolhidas para a tela mostrar só a imagem.
+// Dois toques no disparo abrem a gaveta; escolher um filtro ou tocar em
+// qualquer outro lugar recolhe. Com uma foto da galeria ela fica sempre aberta.
+
+let drawerTimer = 0;
+const palettesOpen = () => app.dataset.palettes === 'open';
+
+function setPalettesOpen(open: boolean): void {
+  if (!renderer) return;
+  if (app.dataset.source === 'gallery') open = true;
+  clearTimeout(drawerTimer);
+  if (open === palettesOpen()) return;
+  if (open) {
+    // Escalona a entrada: os itens perto do filtro escolhido aparecem primeiro.
+    pickerRoot.querySelectorAll<HTMLElement>('.palette-item').forEach((item, i) => {
+      item.style.setProperty('--d', String(Math.min(Math.abs(i - selected), 8)));
+    });
+    app.dataset.palettes = 'open';
+  } else {
+    delete app.dataset.palettes;
+  }
+  drawer.inert = !open;
+}
+
+/** Depois de escolher, deixa ver a seleção por um instante antes de recolher. */
+function collapsePalettesSoon(): void {
+  clearTimeout(drawerTimer);
+  drawerTimer = window.setTimeout(() => setPalettesOpen(false), 450);
+}
+
+// Toque fora da gaveta (e fora do disparo, que tem o próprio gesto) recolhe.
+document.addEventListener(
+  'pointerdown',
+  (e) => {
+    const target = e.target as Node;
+    if (palettesOpen() && !drawer.contains(target) && !shutterBtn.contains(target)) setPalettesOpen(false);
+  },
+  true,
+);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && palettesOpen()) setPalettesOpen(false);
+});
+
+// ---------- Intensidade quase invisível ----------
+// Fica discreta e acende enquanto o dedo está nela (ou no teclado).
+
+let intensityIdle = 0;
+
+function wakeIntensity(): void {
+  clearTimeout(intensityIdle);
+  intensityRow.classList.add('active');
+}
+
+function restIntensity(): void {
+  if (!intensityRow.classList.contains('active')) return;
+  clearTimeout(intensityIdle);
+  intensityIdle = window.setTimeout(() => intensityRow.classList.remove('active'), 1200);
+}
+
+intensityRow.addEventListener('pointerdown', wakeIntensity);
+intensityInput.addEventListener('input', wakeIntensity);
+intensityInput.addEventListener('change', restIntensity);
+intensityInput.addEventListener('blur', restIntensity);
+// O dedo pode sair da faixa enquanto arrasta: escuta o soltar na janela toda.
+window.addEventListener('pointerup', restIntensity);
+window.addEventListener('pointercancel', restIntensity);
+
 // ---------- Editor de paletas ----------
 
 /** Paleta sendo editada; null ao criar uma nova. */
@@ -224,6 +299,7 @@ function openEditor(index: number | null): void {
         mode: base?.mode ?? 'gradient',
       };
   app.dataset.sheet = 'editor';
+  setPalettesOpen(false);
   editor.open(draft, palette ? 'edit' : 'create');
   previewPalette(draft.colors, draft.mode);
 }
@@ -316,6 +392,7 @@ const settings = new SettingsPanel(settingsRoot, {
 settingsBtn.addEventListener('click', () => {
   if (photo || app.dataset.sheet) return;
   app.dataset.sheet = 'settings';
+  setPalettesOpen(false);
   settings.open(adjustments, mirrorPhotos, customPalettes.length);
 });
 // Sem WebGL não há filtros para ajustar.
@@ -535,7 +612,20 @@ reviewSound.addEventListener('click', () => {
 // Vídeo depende de WebGL (grava o preview filtrado) e de suporte do navegador.
 captureModeRoot.hidden = !renderer || !canRecordVideo();
 
-shutterBtn.addEventListener('click', onShutter);
+const shutterTaps = createTapClassifier({
+  single: () => {
+    setPalettesOpen(false);
+    onShutter();
+  },
+  double: () => {
+    navigator.vibrate?.(10);
+    setPalettesOpen(!palettesOpen());
+  },
+});
+shutterBtn.addEventListener('click', (e) => {
+  // Teclado (detail 0) e parar a gravação respondem na hora; sem filtros não há gaveta.
+  shutterTaps.tap(e.detail === 0 || !renderer || recorder.recording);
+});
 saveBtn.addEventListener('click', saveCurrentPhoto);
 reviewClose.addEventListener('click', closeReview);
 document.addEventListener('keydown', (e) => {
@@ -589,6 +679,10 @@ async function startCamera(facing = camera.facing): Promise<void> {
     setupZoom();
     if (!photo) renderer?.start();
     setState('running');
+    if (renderer && !loadDrawerHintSeen()) {
+      showNotice('Dois toques no botão mostram os filtros');
+      saveDrawerHintSeen();
+    }
   } catch (err) {
     showError(err);
   }
@@ -668,6 +762,7 @@ function updateSourceUi(): void {
   galleryCloseBtn.hidden = !usingGallery;
   switchBtn.hidden = usingGallery || cameraCount < 2;
   captureModeRoot.hidden = usingGallery || !renderer || !canRecordVideo();
+  setPalettesOpen(usingGallery);
 }
 
 async function openGalleryFile(file: File): Promise<void> {

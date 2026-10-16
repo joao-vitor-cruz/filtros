@@ -52,14 +52,17 @@
           <input id="intensity" type="range" min="0" max="100" step="1" value="100" />
           <output id="intensity-value" for="intensity">100%</output>
         </label>
-        <div class="palette-picker" id="palette-picker"></div>
+        <!-- Gaveta dos filtros: fechada na câmera, abre com dois toques no disparo. -->
+        <div class="palette-drawer" id="palette-drawer" inert>
+          <div class="palette-picker" id="palette-picker"></div>
+        </div>
         <div class="capture-mode" id="capture-mode" role="radiogroup" aria-label="Modo de captura" hidden>
           <button type="button" role="radio" aria-checked="true" data-mode="photo">Foto</button>
           <button type="button" role="radio" aria-checked="false" data-mode="video">Vídeo</button>
         </div>
         <div class="shutter-row">
           <button class="text-btn gallery-btn" id="open-gallery" type="button" aria-label="Escolher foto da galeria">Galeria</button>
-          <button class="shutter" id="shutter" type="button" aria-label="Tirar foto" disabled></button>
+          <button class="shutter" id="shutter" type="button" aria-label="Tirar foto" aria-description="Toque duas vezes para ver os filtros" disabled></button>
           <button class="primary-btn gallery-save" id="gallery-save" type="button" hidden>Salvar</button>
         </div>
         <input id="gallery-input" type="file" accept="image/*" hidden />

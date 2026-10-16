@@ -366,7 +366,15 @@ button {
   letter-spacing: var(--caps);
   text-transform: uppercase;
   text-shadow: var(--lift);
-  transition: opacity 200ms ease;
+  /* Quase invisível em repouso; acende enquanto o dedo está nela. */
+  opacity: 0.3;
+  transition: opacity 600ms ease;
+}
+
+.intensity.active,
+.intensity:has(input:focus-visible) {
+  opacity: 1;
+  transition-duration: 150ms;
 }
 
 .intensity input {
@@ -374,7 +382,7 @@ button {
 }
 
 .intensity.disabled {
-  opacity: 0.4;
+  opacity: 0.12;
 }
 
 .intensity output {
@@ -435,6 +443,65 @@ button {
 /* O seletor mantém a fonte do design anterior. */
 .palette-picker {
   font-family: var(--font-picker);
+}
+
+/* ---------- Gaveta de filtros ---------- */
+
+/* Recolhida, a gaveta tem altura zero (linha 0fr) e some o espaço do gap da barra.
+   As margens laterais negativas, antes no carrossel, ficam aqui para o recorte
+   da gaveta não cortar as pontas do carrossel. */
+.palette-drawer {
+  display: grid;
+  grid-template-rows: 0fr;
+  margin: 0 calc(-16px - var(--safe-right)) -10px calc(-16px - var(--safe-left));
+  /* Ao fechar, os itens saem primeiro e a gaveta encolhe logo depois. */
+  transition:
+    grid-template-rows 340ms var(--ease) 80ms,
+    margin-bottom 340ms var(--ease) 80ms;
+}
+
+.palette-drawer > .palette-picker {
+  min-height: 0;
+  margin: 0;
+  overflow-y: hidden;
+  /* O respiro vertical do carrossel só existe com a gaveta aberta. */
+  padding-top: 0;
+  padding-bottom: 0;
+  transition: padding 340ms var(--ease) 80ms;
+}
+
+.app[data-palettes='open'] .palette-drawer > .palette-picker {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  transition: padding 420ms var(--ease);
+}
+
+.app[data-palettes='open'] .palette-drawer {
+  grid-template-rows: 1fr;
+  margin-bottom: 0;
+  transition:
+    grid-template-rows 420ms var(--ease),
+    margin-bottom 420ms var(--ease);
+}
+
+/* Cada paleta sobe do disparo crescendo, com um leve quique, em cascata a partir
+   do filtro escolhido (--d é a distância até ele, definida ao abrir). */
+.palette-drawer .palette-item {
+  opacity: 0;
+  transform: translateY(26px) scale(0.55);
+  transition:
+    color 200ms ease,
+    opacity 160ms ease,
+    transform 220ms var(--ease);
+}
+
+.app[data-palettes='open'] .palette-drawer .palette-item {
+  opacity: 1;
+  transform: none;
+  transition:
+    color 200ms ease,
+    opacity 260ms ease calc(var(--d, 0) * 38ms + 70ms),
+    transform 600ms cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--d, 0) * 38ms + 70ms);
 }
 
 /* ---------- Carrossel de paletas ---------- */
@@ -648,6 +715,26 @@ button {
 
 .shutter:active::after {
   transform: scale(0.92);
+}
+
+/* Anel fino em volta do disparo enquanto a gaveta de filtros está aberta. */
+.shutter::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.85);
+  transition:
+    opacity 220ms ease,
+    transform 420ms var(--ease);
+  pointer-events: none;
+}
+
+.app[data-palettes='open'] .shutter::before {
+  opacity: 0.8;
+  transform: none;
 }
 
 .shutter:disabled {
@@ -1652,7 +1739,14 @@ fieldset.field legend {
   .intensity,
   .notice,
   .shutter::after,
-  .switch-row input::after {
+  .shutter::before,
+  .switch-row input::after,
+  .palette-drawer,
+  .app[data-palettes='open'] .palette-drawer,
+  .palette-drawer > .palette-picker,
+  .app[data-palettes='open'] .palette-drawer > .palette-picker,
+  .palette-drawer .palette-item,
+  .app[data-palettes='open'] .palette-drawer .palette-item {
     transition: none;
   }
   .flash.active,

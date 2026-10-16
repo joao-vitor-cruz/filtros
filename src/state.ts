@@ -22,6 +22,7 @@ const FILTER_KEY = 'filtros:filtro';
 const INTENSITY_KEY = 'filtros:intensidade';
 const ADJUSTMENTS_KEY = 'filtros:ajustes';
 const MIRROR_KEY = 'filtros:espelhar-fotos';
+const DRAWER_HINT_KEY = 'filtros:dica-gaveta';
 
 function read(key: string): string | null {
   try {
@@ -60,3 +61,7 @@ export const saveAdjustments = (value: Adjustments): void => write(ADJUSTMENTS_K
 /** Fotos da câmera frontal saem espelhadas como no preview, a não ser que o usuário desligue. */
 export const loadMirrorPhotos = (): boolean => read(MIRROR_KEY) !== 'false';
 export const saveMirrorPhotos = (value: boolean): void => write(MIRROR_KEY, String(value));
+
+/** A dica do toque duplo aparece só na primeira vez. */
+export const loadDrawerHintSeen = (): boolean => read(DRAWER_HINT_KEY) === 'true';
+export const saveDrawerHintSeen = (): void => write(DRAWER_HINT_KEY, 'true');
