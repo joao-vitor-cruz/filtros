@@ -15,6 +15,7 @@ import {
   type CurveChannel,
   type HslColor,
   type SliderGroup,
+  type SliderKey,
   type Wheel,
 } from '../edit/adjustments';
 import { HELP, type HelpKey } from '../edit/help';
@@ -46,9 +47,14 @@ const CURVE_COLORS: Record<CurveChannel, string> = { rgb: '#111111', r: '#d6332e
 /** Um controle deslizante com rótulo, botão "?" e valor de -100 a 100 (ou 0 a 100). */
 type SliderRow = { element: HTMLElement; set: (value: number) => void };
 
+/** Duração da descida do painel ao fechar (igual à animação `sheet-down` do CSS). */
+const CLOSE_MS = 320;
+
 /**
  * Painel de ajustes no estilo do Instagram Edits: abas Luz, Cor, HSL, Rodas,
  * Curvas, Estilo e Mais. Cada ajuste tem um "?" que explica o que ele faz.
+ * Nas abas de controles deslizantes aparece um ajuste por vez (escolhido numa
+ * fileira de nomes), para o painel ser baixo e a câmera continuar visível.
  */
 export class SettingsPanel {
   private values: Adjustments = defaultAdjustments();
@@ -65,6 +71,8 @@ export class SettingsPanel {
   private hslColor: HslColor = 'red';
   private wheel: Wheel = 'global';
   private curveChannel: CurveChannel = 'rgb';
+  private hslField: 'hue' | 'saturation' | 'luminance' = 'hue';
+  private closeTimer = 0;
 
   constructor(
     private readonly root: HTMLElement,
@@ -113,13 +121,26 @@ export class SettingsPanel {
     this.mirrorInput.checked = mirror;
     this.setPaletteCount(paletteCount);
     this.refresh();
+    clearTimeout(this.closeTimer);
+    this.root.classList.remove('closing');
     this.root.hidden = false;
-    this.title.focus();
+    this.title.focus({ preventScroll: true });
   }
 
+  /** Desce o painel com animação e só depois o esconde. */
   close(): void {
     this.closeHelp();
-    this.root.hidden = true;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) {
+      this.root.hidden = true;
+      return;
+    }
+    this.root.classList.add('closing');
+    clearTimeout(this.closeTimer);
+    this.closeTimer = window.setTimeout(() => {
+      this.root.hidden = true;
+      this.root.classList.remove('closing');
+    }, CLOSE_MS);
   }
 
   /** Atualiza o texto e o botão de exportar conforme quantas paletas o usuário criou. */
@@ -182,17 +203,43 @@ export class SettingsPanel {
     if (id === 'hsl') this.buildHsl(panel);
     else if (id === 'wheels') this.buildWheels(panel);
     else if (id === 'curves') this.buildCurves(panel);
-    else {
-      for (const def of SLIDERS.filter((s) => s.group === id)) {
-        const row = this.slider(def.label, def.key, def.min, (v) => {
-          this.values[def.key] = v;
-          this.emit();
-        });
-        this.refreshers.push(() => row.set(this.values[def.key]));
-        panel.append(row.element);
-      }
-    }
+    else this.buildSliderGroup(panel, id);
     return panel;
+  }
+
+  /** Fileira com os nomes dos ajustes da aba e, embaixo, só o controle do escolhido. */
+  private buildSliderGroup(panel: HTMLElement, group: SliderGroup): void {
+    const defs = SLIDERS.filter((s) => s.group === group);
+    let current: SliderKey = defs[0].key;
+    const changed = (key: SliderKey) => this.values[key] !== 0;
+    const rows = new Map<SliderKey, SliderRow>();
+    const show = () => {
+      for (const [key, row] of rows) row.element.hidden = key !== current;
+      chips.select(current, changed);
+    };
+    const chips = this.chips(
+      defs.map((d) => ({ id: d.key, label: d.label })),
+      'Ajuste',
+      (key) => {
+        current = key;
+        show();
+      },
+    );
+    panel.append(chips.element);
+    for (const def of defs) {
+      const row = this.slider(def.label, def.key, def.min, (v) => {
+        this.values[def.key] = v;
+        chips.select(current, changed);
+        this.emit();
+      });
+      row.element.classList.add('compact'); // o nome já está na fileira acima
+      rows.set(def.key, row);
+      panel.append(row.element);
+    }
+    this.refreshers.push(() => {
+      for (const [key, row] of rows) row.set(this.values[key]);
+      show();
+    });
   }
 
   // ---------- HSL ----------
@@ -208,22 +255,39 @@ export class SettingsPanel {
       },
     );
     panel.append(chips.element);
-    (
-      [
-        ['Matiz', 'hue', 'hslHue'],
-        ['Saturação', 'saturation', 'hslSaturation'],
-        ['Luminância', 'luminance', 'hslLuminance'],
-      ] as const
-    ).forEach(([label, field, help]) => {
+    const fields = [
+      ['Matiz', 'hue', 'hslHue'],
+      ['Saturação', 'saturation', 'hslSaturation'],
+      ['Luminância', 'luminance', 'hslLuminance'],
+    ] as const;
+    // Um dos três por vez, como nas outras abas.
+    const fieldChips = this.chips(
+      fields.map(([label, field]) => ({ id: field, label })),
+      'Propriedade do HSL',
+      (field) => {
+        this.hslField = field;
+        this.refresh();
+      },
+    );
+    panel.append(fieldChips.element);
+    for (const [label, field, help] of fields) {
       const row = this.slider(label, help, -1, (v) => {
         this.values.hsl[this.hslColor][field] = v;
         chips.select(this.hslColor, (c) => this.isHslChanged(c));
+        fieldChips.select(this.hslField, (f) => this.values.hsl[this.hslColor][f] !== 0);
         this.emit();
       });
-      this.refreshers.push(() => row.set(this.values.hsl[this.hslColor][field]));
+      row.element.classList.add('compact');
+      this.refreshers.push(() => {
+        row.set(this.values.hsl[this.hslColor][field]);
+        row.element.hidden = field !== this.hslField;
+      });
       panel.append(row.element);
+    }
+    this.refreshers.push(() => {
+      chips.select(this.hslColor, (c) => this.isHslChanged(c));
+      fieldChips.select(this.hslField, (f) => this.values.hsl[this.hslColor][f] !== 0);
     });
-    this.refreshers.push(() => chips.select(this.hslColor, (c) => this.isHslChanged(c)));
   }
 
   private isHslChanged(c: HslColor): boolean {
@@ -390,7 +454,10 @@ export class SettingsPanel {
         b.append(dot);
       }
       b.append(item.label);
-      b.addEventListener('click', () => onSelect(item.id));
+      b.addEventListener('click', () => {
+        onSelect(item.id);
+        b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      });
       group.append(b);
       return b;
     });

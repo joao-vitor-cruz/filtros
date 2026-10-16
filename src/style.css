@@ -71,6 +71,13 @@ button {
   inset: 0;
   height: 100dvh;
   overflow: hidden;
+  background: var(--bg);
+  transition: background-color 460ms var(--ease);
+}
+
+/* Ajustes abertos: a câmera vira um quadro solto sobre o papel, acima do painel. */
+.app[data-sheet='settings'] {
+  background: var(--paper);
 }
 
 /* Preview em tela cheia, cortado (cover) para não distorcer.
@@ -84,7 +91,25 @@ button {
   object-fit: cover;
   background: var(--bg);
   opacity: 0;
-  transition: opacity 200ms ease;
+  /* Encolher usa scale/translate (e não transform) para somar com o espelhamento. */
+  transform-origin: 50% 0;
+  transition:
+    opacity 200ms ease,
+    scale 460ms var(--ease),
+    translate 460ms var(--ease);
+}
+
+/* --preview-scale e --preview-y vêm do JS, conforme a altura do painel. */
+.app[data-sheet='settings'] .preview {
+  scale: var(--preview-scale, 1);
+  translate: 0 var(--preview-y, 0px);
+}
+
+/* O vídeo (sem filtro) encolhe um pouco mais, para nunca aparecer como um fio
+   nas bordas do canvas por arredondamento. */
+.app[data-sheet='settings'] .source {
+  scale: calc(var(--preview-scale, 1) * 0.96);
+  translate: 0 calc(var(--preview-y, 0px) + 8px);
 }
 
 /* O vídeo fica atrás do canvas: precisa continuar "visível" para o navegador
@@ -1170,11 +1195,31 @@ fieldset.field legend {
 
 /* Mais baixo que as outras folhas: a foto continua visível enquanto edita. */
 .edit-sheet {
-  max-height: 56dvh;
+  max-height: 60dvh;
 }
 
+/* Sobe do pé da tela junto com a câmera encolhendo; ao fechar, desce. O fio no
+   topo separa o painel do fundo, que também é papel enquanto ele está aberto. */
 .edit-sheet .sheet-body {
   gap: 16px;
+  border-top: 1px solid var(--rule);
+  animation: sheet-up 460ms var(--ease);
+}
+
+.edit-sheet.closing .sheet-body {
+  animation: sheet-down 320ms cubic-bezier(0.5, 0, 0.75, 0) forwards;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sheet-down {
+  to {
+    transform: translateY(100%);
+  }
 }
 
 .edit-tabs {
@@ -1259,6 +1304,26 @@ fieldset.field legend {
   font-size: 0.75rem;
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
+}
+
+/* Um ajuste por vez: o nome já aparece na fileira de cima. Fica só para leitores
+   de tela, e o "?" vai para o lado do valor. */
+.adjust-row.compact .adjust-head {
+  justify-content: flex-end;
+}
+
+.adjust-row.compact .adjust-head .help-btn {
+  order: 2;
+  margin-left: 8px;
+}
+
+.adjust-row.compact .adjust-head label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .section-head {
@@ -1440,7 +1505,7 @@ fieldset.field legend {
 }
 
 .curve-editor {
-  width: min(240px, 66vw);
+  width: min(200px, 54vw);
   aspect-ratio: 1;
   border: 1px solid var(--rule);
   touch-action: none;
@@ -1742,6 +1807,8 @@ fieldset.field legend {
     animation-duration: 3s;
   }
   .preview,
+  .source,
+  .app,
   .filter-toast,
   .palette-swatch,
   .intensity,
@@ -1759,6 +1826,7 @@ fieldset.field legend {
   }
   .flash.active,
   .sheet-body,
+  .edit-sheet .sheet-body,
   .cropper,
   .help-card,
   .rec-dot {

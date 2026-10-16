@@ -71,6 +71,7 @@ const notice = $<HTMLElement>('#notice');
 const editorRoot = $<HTMLElement>('#editor');
 const settingsRoot = $<HTMLElement>('#settings');
 const settingsBtn = $<HTMLButtonElement>('#open-settings');
+const settingsBody = settingsRoot.querySelector<HTMLElement>('.sheet-body')!;
 const galleryBtn = $<HTMLButtonElement>('#open-gallery');
 const galleryInput = $<HTMLInputElement>('#gallery-input');
 const gallerySaveBtn = $<HTMLButtonElement>('#gallery-save');
@@ -396,7 +397,28 @@ settingsBtn.addEventListener('click', () => {
   app.dataset.sheet = 'settings';
   setPalettesOpen(false);
   settings.open(adjustments, mirrorPhotos, customPalettes.length);
+  fitPreviewAboveSheet();
 });
+
+// Com os ajustes abertos, a câmera encolhe para caber inteira acima do painel.
+// É só uma escala visual (o canvas não muda de tamanho nem redesenha); o CSS anima.
+const PREVIEW_GAP = 16;
+const topBar = $<HTMLElement>('.top-bar');
+
+function fitPreviewAboveSheet(): void {
+  if (app.dataset.sheet !== 'settings') return;
+  // O padding da barra do topo já inclui a área segura (notch) resolvida pelo navegador.
+  const top = PREVIEW_GAP + parseFloat(getComputedStyle(topBar).paddingTop);
+  // offsetHeight ignora a animação de subida: é a altura final do painel.
+  const sheetTop = app.clientHeight - settingsBody.offsetHeight;
+  const scale = Math.max(0.2, Math.min(1, (sheetTop - PREVIEW_GAP - top) / app.clientHeight));
+  app.style.setProperty('--preview-scale', scale.toFixed(4));
+  app.style.setProperty('--preview-y', `${Math.round(top)}px`);
+}
+
+// A altura do painel muda ao trocar de aba (curvas e rodas ocupam mais).
+new ResizeObserver(fitPreviewAboveSheet).observe(settingsBody);
+window.addEventListener('resize', fitPreviewAboveSheet);
 // Sem WebGL não há filtros para ajustar.
 settingsBtn.hidden = !renderer;
 
