@@ -467,13 +467,21 @@ button {
   /* O respiro vertical do carrossel só existe com a gaveta aberta. */
   padding-top: 0;
   padding-bottom: 0;
-  transition: padding 340ms var(--ease) 80ms;
+  transition:
+    padding 340ms var(--ease) 80ms,
+    margin 340ms var(--ease) 80ms;
 }
 
+/* O carrossel rola na horizontal, então corta o que passa em cima e embaixo.
+   Folga extra no topo para o quique e o anel da paleta escolhida não serem
+   cortados; a margem negativa (do tamanho do gap da barra) mantém a posição. */
 .app[data-palettes='open'] .palette-drawer > .palette-picker {
-  padding-top: 8px;
-  padding-bottom: 8px;
-  transition: padding 420ms var(--ease);
+  margin-top: -10px;
+  padding-top: 20px;
+  padding-bottom: 10px;
+  transition:
+    padding 420ms var(--ease),
+    margin 420ms var(--ease);
 }
 
 .app[data-palettes='open'] .palette-drawer {

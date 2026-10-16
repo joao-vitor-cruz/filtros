@@ -1,8 +1,12 @@
 import type { FilterOption } from '../state';
 import { iconBackground } from './palette-editor';
+import { DOUBLE_TAP_MS } from './double-tap';
 
 type Callbacks = {
+  /** Um toque: escolhe a paleta (o preview muda na hora). */
   onSelect: (index: number) => void;
+  /** Dois toques no mesmo item: escolhe e confirma (a gaveta recolhe). */
+  onConfirm: (index: number) => void;
   /** Paleta personalizada: tocar de novo quando já está escolhida, ou manter pressionado. */
   onEdit: (index: number) => void;
   onCreate: () => void;
@@ -18,6 +22,9 @@ const LONG_PRESS_TOLERANCE = 10; // px que o dedo pode andar sem cancelar
 export class PalettePicker {
   private buttons: HTMLButtonElement[] = [];
   private selected = -1;
+  /** Último toque num item, para reconhecer o segundo toque de um toque duplo. */
+  private lastTap: { index: number; time: number } | null = null;
+  private editTimer = 0;
 
   constructor(
     private readonly root: HTMLElement,
@@ -85,7 +92,7 @@ export class PalettePicker {
     const editable = !!option.palette && !option.palette.builtIn;
     if (editable) {
       button.classList.add('custom');
-      button.setAttribute('aria-description', 'Toque de novo para editar');
+      button.setAttribute('aria-description', 'Toque de novo ou mantenha pressionado para editar');
       this.onLongPress(button, () => this.callbacks.onEdit(index));
     }
 
@@ -94,12 +101,33 @@ export class PalettePicker {
         delete button.dataset.longPressed; // o toque longo já abriu o editor
         return;
       }
-      if (editable && index === this.selected) this.callbacks.onEdit(index);
-      else this.callbacks.onSelect(index);
+      this.onTap(index, editable);
     });
 
     this.buttons.push(button);
     return button;
+  }
+
+  /**
+   * O primeiro toque escolhe na hora; um segundo toque no mesmo item logo em
+   * seguida confirma. Numa paleta personalizada já escolhida, o toque abre o
+   * editor, mas só depois da janela do toque duplo (para não brigar com ele).
+   */
+  private onTap(index: number, editable: boolean): void {
+    const now = performance.now();
+    const last = this.lastTap;
+    clearTimeout(this.editTimer);
+    if (last && last.index === index && now - last.time < DOUBLE_TAP_MS) {
+      this.lastTap = null;
+      this.callbacks.onConfirm(index);
+      return;
+    }
+    this.lastTap = { index, time: now };
+    if (editable && index === this.selected) {
+      this.editTimer = window.setTimeout(() => this.callbacks.onEdit(index), DOUBLE_TAP_MS);
+    } else {
+      this.callbacks.onSelect(index);
+    }
   }
 
   private createAddButton(): HTMLButtonElement {

@@ -120,7 +120,8 @@ let intensity = loadIntensity();
 let toastTimer = 0;
 
 const picker = new PalettePicker(pickerRoot, options, {
-  onSelect: (index) => {
+  onSelect: (index) => selectFilter(index, false),
+  onConfirm: (index) => {
     selectFilter(index, false);
     collapsePalettesSoon();
   },
@@ -206,8 +207,9 @@ if (renderer) {
 
 // ---------- Gaveta de filtros ----------
 // Na câmera, as paletas ficam recolhidas para a tela mostrar só a imagem.
-// Dois toques no disparo abrem a gaveta; escolher um filtro ou tocar em
-// qualquer outro lugar recolhe. Com uma foto da galeria ela fica sempre aberta.
+// Dois toques no disparo abrem a gaveta. Um toque numa paleta experimenta;
+// dois toques escolhem e recolhem, assim como tocar em qualquer outro lugar.
+// Com uma foto da galeria ela fica sempre aberta.
 
 let drawerTimer = 0;
 const palettesOpen = () => app.dataset.palettes === 'open';
@@ -229,10 +231,10 @@ function setPalettesOpen(open: boolean): void {
   drawer.inert = !open;
 }
 
-/** Depois de escolher, deixa ver a seleção por um instante antes de recolher. */
+/** Depois de confirmar, deixa ver a seleção por um instante antes de recolher. */
 function collapsePalettesSoon(): void {
   clearTimeout(drawerTimer);
-  drawerTimer = window.setTimeout(() => setPalettesOpen(false), 450);
+  drawerTimer = window.setTimeout(() => setPalettesOpen(false), 220);
 }
 
 // Toque fora da gaveta (e fora do disparo, que tem o próprio gesto) recolhe.
