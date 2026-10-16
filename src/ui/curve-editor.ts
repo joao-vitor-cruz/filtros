@@ -16,7 +16,7 @@ export class CurveEditor {
     [0, 0],
     [1, 1],
   ];
-  private color = '#ffffff';
+  private color = '#111111';
   private dragging: number | null = null;
   private lastTap = { index: -1, time: 0 };
 
@@ -130,7 +130,7 @@ export class CurveEditor {
     ctx.translate(pad, pad);
 
     // Grade em quartos e a diagonal (curva neutra).
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.strokeStyle = 'rgba(17,17,17,0.12)';
     ctx.lineWidth = dpr;
     for (let i = 1; i < 4; i++) {
       const p = (w * i) / 4;
@@ -150,7 +150,7 @@ export class CurveEditor {
 
     const f = curveFunction(this.points);
     ctx.strokeStyle = this.color;
-    ctx.lineWidth = 2.5 * dpr;
+    ctx.lineWidth = 1.5 * dpr;
     ctx.beginPath();
     for (let i = 0; i <= 128; i++) {
       const x = i / 128;
@@ -163,10 +163,10 @@ export class CurveEditor {
 
     for (const [x, y] of this.points) {
       ctx.beginPath();
-      ctx.arc(x * w, (1 - y) * w, 6 * dpr, 0, Math.PI * 2);
-      ctx.fillStyle = '#111';
+      ctx.arc(x * w, (1 - y) * w, 5 * dpr, 0, Math.PI * 2);
+      ctx.fillStyle = '#f2f1ed';
       ctx.fill();
-      ctx.lineWidth = 2 * dpr;
+      ctx.lineWidth = 1.5 * dpr;
       ctx.strokeStyle = this.color;
       ctx.stroke();
     }
