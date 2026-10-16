@@ -41,7 +41,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'more', label: 'Mais' },
 ];
 
-const CURVE_COLORS: Record<CurveChannel, string> = { rgb: '#ffffff', r: '#ff5a5a', g: '#4cd964', b: '#5aa9ff' };
+const CURVE_COLORS: Record<CurveChannel, string> = { rgb: '#111111', r: '#d6332e', g: '#2f9e4f', b: '#2f6fd6' };
 
 /** Um controle deslizante com rótulo, botão "?" e valor de -100 a 100 (ou 0 a 100). */
 type SliderRow = { element: HTMLElement; set: (value: number) => void };
